@@ -15,4 +15,9 @@ urlpatterns = [
     path('datasets/<int:id>/edit/', views.dataset_edit, name='dataset_edit'),
     path('datasets/<int:id>/versions/', views.dataset_versions, name='dataset_versions'),
     path('logout/', views.logout_view, name='logout'),
+    path(
+        'datasets/<int:id>/delete/',
+        views.dataset_delete,
+        name='dataset_delete'
+    ),
 ]

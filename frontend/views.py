@@ -133,3 +133,12 @@ def dataset_versions(request, id):
 def logout_view(request):
     logout(request)
     return redirect('login')
+
+@login_required
+def dataset_delete(request, id):
+    dataset = get_object_or_404(Dataset, id=id)
+
+    if request.method == 'POST':
+        dataset.delete()
+
+    return redirect('datasets')

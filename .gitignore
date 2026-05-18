@@ -41,3 +41,4 @@ Thumbs.db
 #--- Ambiente / Variáveis Sensíveis ---
 .env
 .flaskenv
+config/settings.py
