@@ -11,7 +11,11 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
-import os
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -39,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework_simplejwt',
     'accounts',
     'categories',
     'datasets',
@@ -77,6 +82,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
+<<<<<<< HEAD
 
 DATABASES = {
     'default': {
@@ -91,12 +97,14 @@ DATABASES = {
  
 
 # Para usar PostgreSQL em produção, comente acima e descomente:
+=======
+>>>>>>> f13d5740979223a3a821417b61edef14b571b022
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'estagio',   
         'USER': 'postgres',
-        'PASSWORD': 'chico',
+        'PASSWORD': 'atuapassword',
         'HOST': 'localhost',
         'PORT': '5432',
     }
