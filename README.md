@@ -1,6 +1,6 @@
 ...
 
-# git clone https://github.com/chicobanza13/estagio.git
+#git clone https://github.com/chicobanza13/estagio.git
 #cd estagio
 #code .
 #git config --global user.email "teu@email.com"
