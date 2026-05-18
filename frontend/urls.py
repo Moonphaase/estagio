@@ -1,7 +1,7 @@
 from django.urls import path
 from django.shortcuts import redirect
 from . import views
-#chicão
+
 urlpatterns = [
     path('', lambda request: redirect('login')),
     path('dashboard/', views.dashboard, name='dashboard'),
