@@ -1,0 +1,55 @@
+{% extends "frontend/base.html" %}
+
+{% block title %}Versões do Dataset{% endblock %}
+{% block page_title %}Versões de {{ dataset.name|default:"Dataset" }}{% endblock %}
+{% block nav_datasets %}bg-gray-100 font-medium text-gray-900{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-lg border border-gray-200 p-5 mb-4">
+    <div class="flex items-start justify-between gap-4">
+        <div>
+            <h2 class="font-semibold text-gray-800 mb-1">{{ dataset.name|default:"Dataset" }}</h2>
+            <p class="text-sm text-gray-500">{{ dataset.description|default:"Sem descrição." }}</p>
+        </div>
+        <div class="text-sm text-gray-500">
+            <p>Dono: {{ dataset.owner|default:"—" }}</p>
+            <p>Criado em: {{ dataset.created_at|date:"d/m/Y"|default:"—" }}</p>
+        </div>
+    </div>
+</div>
+
+<div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-gray-700">Versões</h2>
+        <a href="#" class="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700">+ Nova Versão</a>
+    </div>
+    <table class="w-full text-sm">
+        <thead class="bg-gray-50 text-xs text-gray-500">
+            <tr>
+                <th class="px-4 py-2 text-left">Versão</th>
+                <th class="px-4 py-2 text-left">Ficheiro</th>
+                <th class="px-4 py-2 text-left">Notas</th>
+                <th class="px-4 py-2 text-left">Data</th>
+                <th class="px-4 py-2 text-left">Criado por</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+            {% if versions %}
+                {% for version in versions %}
+                    <tr>
+                        <td class="px-4 py-3 text-gray-700">{{ version.version }}</td>
+                        <td class="px-4 py-3 text-gray-700">{{ version.file.name|default:"—" }}</td>
+                        <td class="px-4 py-3 text-gray-700">{{ version.notes|default:"—" }}</td>
+                        <td class="px-4 py-3 text-gray-700">{{ version.created_at|date:"d/m/Y H:i" }}</td>
+                        <td class="px-4 py-3 text-gray-700">{{ version.created_by|default:"—" }}</td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="5" class="px-4 py-6 text-center text-gray-400">Ainda não há versões.</td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

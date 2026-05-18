@@ -1,0 +1,77 @@
+{% extends "frontend/base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block nav_dashboard %}bg-gray-100 font-medium text-gray-900{% endblock %}
+
+{% block content %}
+
+<div class="grid grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-lg p-4 border border-gray-200">
+        <p class="text-xs text-gray-500 mb-1">Total de Datasets</p>
+        <p class="text-2xl font-semibold text-gray-800">{{ total_datasets }}</p>
+    </div>
+    <div class="bg-white rounded-lg p-4 border border-gray-200">
+        <p class="text-xs text-gray-500 mb-1">Total de Versões</p>
+        <p class="text-2xl font-semibold text-gray-800">{{ total_versions|default:"0" }}</p>
+    </div>
+    <div class="bg-white rounded-lg p-4 border border-gray-200">
+        <p class="text-xs text-gray-500 mb-1">Categorias</p>
+        <p class="text-2xl font-semibold text-gray-800">{{ total_categories }}</p>
+    </div>
+    <div class="bg-white rounded-lg p-4 border border-gray-200">
+        <p class="text-xs text-gray-500 mb-1">Os meus Datasets</p>
+        <p class="text-2xl font-semibold text-gray-800">{{ my_datasets }}</p>
+    </div>
+</div>
+
+<div class="bg-white rounded-lg border border-gray-200">
+    <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-gray-700">Datasets recentes</h2>
+        <a href="/datasets" class="text-xs text-blue-600 hover:underline">Ver todos</a>
+    </div>
+    <table class="w-full text-sm">
+        <thead class="bg-gray-50 text-xs text-gray-500">
+            <tr>
+                <th class="px-4 py-2 text-left">Nome</th>
+                <th class="px-4 py-2 text-left">Categoria</th>
+                <th class="px-4 py-2 text-left">Visibilidade</th>
+                <th class="px-4 py-2 text-left">Estado</th>
+                <th class="px-4 py-2 text-left">Data</th>
+            </tr>
+        </thead>
+       <tbody class="divide-y divide-gray-100">
+    {% for dataset in recent_datasets %}
+    <tr class="hover:bg-gray-50">
+        <td class="px-4 py-2 font-medium text-gray-800">
+            <a href="/datasets/{{ dataset.id }}" class="hover:text-blue-600">{{ dataset.name }}</a>
+        </td>
+        <td class="px-4 py-2 text-gray-500">{{ dataset.category|default:"—" }}</td>
+        <td class="px-4 py-2">
+            {% if dataset.visibility == "public" %}
+                <span class="text-xs px-2 py-0.5 rounded bg-green-100 text-green-700">Público</span>
+            {% else %}
+                <span class="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600">Privado</span>
+            {% endif %}
+        </td>
+        <td class="px-4 py-2">
+            {% if dataset.status == "published" %}
+                <span class="text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-700">Publicado</span>
+            {% elif dataset.status == "draft" %}
+                <span class="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-700">Rascunho</span>
+            {% else %}
+                <span class="text-xs px-2 py-0.5 rounded bg-red-100 text-red-700">Arquivado</span>
+            {% endif %}
+        </td>
+        <td class="px-4 py-2 text-gray-400">{{ dataset.created_at|date:"d/m/Y" }}</td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="5" class="px-4 py-6 text-center text-gray-400">Ainda não há datasets.</td>
+    </tr>
+    {% endfor %}
+</tbody>
+    </table>
+</div>
+
+{% endblock %}

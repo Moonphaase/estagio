@@ -1,0 +1,21 @@
+# Django
+Django==6.0.5
+
+# Django REST Framework
+djangorestframework==3.14.0
+drf-nested-routers==0.93.4
+djangorestframework-simplejwt==5.3.1
+
+# Database
+# psycopg2-binary==2.9.9  # Comentado: requer Microsoft C++ Build Tools
+# Para usar PostgreSQL no desenvolvimento, instale os build tools de: https://visualstudio.microsoft.com/visual-cpp-build-tools/
+
+# CORS Headers
+django-cors-headers==4.3.1
+
+# Environment variables
+python-decouple==3.8
+
+# Utilities
+python-slugify==8.0.1
+pytz==2024.1

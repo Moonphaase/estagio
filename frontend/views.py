@@ -1,0 +1,135 @@
+from django.shortcuts import get_object_or_404, redirect, render
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import authenticate, login, logout
+from django.contrib import messages
+from datasets.models import Dataset
+from categories.models import Category
+
+@login_required
+def dashboard(request):
+    recent_datasets = Dataset.objects.all().order_by('-created_at')[:5]
+    total_datasets = Dataset.objects.count()
+    total_categories = Category.objects.count()
+    my_datasets = Dataset.objects.filter(owner=request.user).count()
+    return render(request, 'frontend/dashboard.html', {
+        'recent_datasets': recent_datasets,
+        'total_datasets': total_datasets,
+        'total_categories': total_categories,
+        'my_datasets': my_datasets,
+    })
+
+@login_required
+def datasets(request):
+    datasets_list = Dataset.objects.all().order_by('-created_at')
+    return render(request, 'frontend/datasets.html', {'datasets': datasets_list})
+
+def login_view(request):
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        user = authenticate(request, username=email, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect('dashboard')
+        else:
+            return render(request, 'frontend/login.html', {'error': 'Email ou password incorretos'})
+    return render(request, 'frontend/login.html')
+
+def register_view(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+
+        if User.objects.filter(username=username).exists():
+            return render(request, 'frontend/register.html', {'error': 'Nome de utilizador já existe'})
+
+        if User.objects.filter(email=email).exists():
+            return render(request, 'frontend/register.html', {'error': 'Email já está registado'})
+
+        user = User.objects.create_user(username=username, email=email, password=password)
+        login(request, user)
+        return redirect('dashboard')
+
+    return render(request, 'frontend/register.html')
+
+@login_required
+def dataset_detail(request, id):
+    dataset = get_object_or_404(Dataset, id=id)
+    return render(request, 'frontend/dataset_detail.html', {'dataset': dataset})
+
+@login_required
+def dataset_create(request):
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        description = request.POST.get('description')
+        category_id = request.POST.get('category')
+        visibility = request.POST.get('visibility', 'public')
+        status_val = request.POST.get('status', 'draft')
+
+        category = None
+        if category_id:
+            try:
+                category = Category.objects.get(id=category_id)
+            except Category.DoesNotExist:
+                pass
+
+        dataset = Dataset.objects.create(
+            name=name,
+            description=description,
+            category=category,
+            owner=request.user,
+            visibility=visibility,
+            status=status_val
+        )
+        messages.success(request, 'Dataset criado com sucesso!')
+        return redirect('dataset_detail', dataset.id)
+
+    categories = Category.objects.all()
+    return render(request, 'frontend/dataset_create.html', {'categories': categories})
+
+@login_required
+def categories(request):
+    all_categories = Category.objects.all()
+    return render(request, 'frontend/categories.html', {'categories': all_categories})
+
+@login_required
+def profile(request):
+    return render(request, 'frontend/profile.html')
+
+@login_required
+def dataset_edit(request, id):
+    dataset = get_object_or_404(Dataset, id=id)
+    if request.method == 'POST':
+        dataset.name = request.POST.get('name')
+        dataset.description = request.POST.get('description')
+        category_id = request.POST.get('category')
+        dataset.visibility = request.POST.get('visibility', 'public')
+        dataset.status = request.POST.get('status', 'draft')
+
+        if category_id:
+            try:
+                dataset.category = Category.objects.get(id=category_id)
+            except Category.DoesNotExist:
+                dataset.category = None
+        else:
+            dataset.category = None
+
+        dataset.save()
+        messages.success(request, 'Dataset atualizado com sucesso!')
+        return redirect('dataset_detail', dataset.id)
+
+    categories = Category.objects.all()
+    return render(request, 'frontend/dataset_edit.html', {'dataset': dataset, 'categories': categories})
+
+@login_required
+def dataset_versions(request, id):
+    dataset = get_object_or_404(Dataset, id=id)
+    return render(request, 'frontend/dataset_versions.html', {'dataset': dataset})
+
+def logout_view(request):
+    logout(request)
+    return redirect('login')
