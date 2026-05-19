@@ -18,12 +18,6 @@ class CustomUserManager(BaseUserManager):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
         extra_fields.setdefault("is_active", True)
-
-        if extra_fields.get("is_staff") is not True:
-            raise ValueError("Superuser precisa de is_staff=True.")
-        if extra_fields.get("is_superuser") is not True:
-            raise ValueError("Superuser precisa de is_superuser=True.")
-
         return self.create_user(email, username, password, **extra_fields)
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
@@ -35,21 +29,15 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     is_staff    = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
 
-    # CORREÇÃO PARA O ERRO E304:
-    # Definimos related_name específicos para evitar conflito com o User padrão do Django
     groups = models.ManyToManyField(
         'auth.Group',
         related_name='custom_user_groups',
         blank=True,
-        help_text='The groups this user belongs to.',
-        verbose_name='groups',
     )
     user_permissions = models.ManyToManyField(
         'auth.Permission',
         related_name='custom_user_permissions',
         blank=True,
-        help_text='Specific permissions for this user.',
-        verbose_name='user permissions',
     )
 
     objects = CustomUserManager()

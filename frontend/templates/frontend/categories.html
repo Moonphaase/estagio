@@ -9,11 +9,13 @@
 <div class="flex justify-between items-center mb-4">
     <h2 class="text-sm font-semibold text-gray-700">Todas as categorias</h2>
 
+    {% if request.user.is_staff %}
     <a href="{% url 'category_create' %}">
         <button class="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600">
             + Adicionar Categoria
         </button>
     </a>
+    {% endif %}
 </div>
 
 <div class="bg-white rounded-lg border border-gray-200">
@@ -22,7 +24,7 @@
             <tr>
                 <th class="px-4 py-2 text-left">Nome</th>
                 <th class="px-4 py-2 text-left">Descrição</th>
-                <th class="px-4 py-2 text-left">Datasets</th>
+                <th class="px-4 py-2 text-left">Criado em</th>
             </tr>
         </thead>
 

@@ -143,6 +143,10 @@ def dataset_delete(request, id):
 
 @login_required
 def category_create(request):
+    if not request.user.is_staff:
+        messages.error(request, 'Não tens permissão para criar categorias.')
+        return redirect('categories')
+
     if request.method == 'POST':
         name = request.POST.get('name')
         slug = request.POST.get('slug')
