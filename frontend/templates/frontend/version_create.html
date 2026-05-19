@@ -1,0 +1,56 @@
+{% extends "frontend/base.html" %}
+
+{% block title %}Nova Versão{% endblock %}
+{% block page_title %}Nova Versão — {{ dataset.name }}{% endblock %}
+{% block nav_datasets %}bg-gray-100 font-medium text-gray-900{% endblock %}
+
+{% block content %}
+
+{% if error %}
+<div class="mb-4 max-w-2xl text-sm text-red-500 border border-red-200 bg-red-50 rounded px-3 py-2">
+    {{ error }}
+</div>
+{% endif %}
+
+<div class="bg-white rounded-lg border border-gray-200 max-w-2xl p-6">
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="mb-4">
+            <label class="block text-xs text-gray-500 mb-1">Número de versão <span class="text-red-400">*</span></label>
+            <input type="text" name="version" placeholder="ex: 1.0.0" required
+                class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400">
+            <p class="text-xs text-gray-400 mt-1">Formato: MAJOR.MINOR.PATCH (ex: 1.0.0, 1.1.0, 2.0.0)</p>
+        </div>
+
+        <div class="mb-4">
+            <label class="block text-xs text-gray-500 mb-1">Título</label>
+            <input type="text" name="title" placeholder="ex: Atualização de dados de 2024"
+                class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400">
+        </div>
+
+        <div class="mb-4">
+            <label class="block text-xs text-gray-500 mb-1">Ficheiro <span class="text-red-400">*</span></label>
+            <input type="file" name="file" required accept=".csv,.json,.xlsx,.parquet,.zip"
+                class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400">
+            <p class="text-xs text-gray-400 mt-1">Formatos aceites: .csv, .json, .xlsx, .parquet, .zip (máx. 500MB)</p>
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-xs text-gray-500 mb-1">Notas da versão</label>
+            <textarea name="notes" rows="3" placeholder="O que mudou nesta versão?"
+                class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400"></textarea>
+        </div>
+
+        <div class="flex gap-2">
+            <button type="submit" class="bg-blue-600 text-white text-sm px-4 py-2 rounded hover:bg-blue-700">
+                Criar Versão
+            </button>
+            <a href="/datasets/{{ dataset.id }}/versions/" class="text-sm text-gray-500 px-4 py-2 rounded border border-gray-200 hover:bg-gray-50">
+                Cancelar
+            </a>
+        </div>
+    </form>
+</div>
+
+{% endblock %}

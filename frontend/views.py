@@ -97,10 +97,6 @@ def categories(request):
     return render(request, 'frontend/categories.html', {'categories': all_categories})
 
 @login_required
-def profile(request):
-    return render(request, 'frontend/profile.html')
-
-@login_required
 def dataset_edit(request, id):
     dataset = get_object_or_404(Dataset, id=id)
     if request.method == 'POST':
@@ -127,8 +123,13 @@ def dataset_edit(request, id):
 
 @login_required
 def dataset_versions(request, id):
+    from datasets.models import DatasetVersion
     dataset = get_object_or_404(Dataset, id=id)
-    return render(request, 'frontend/dataset_versions.html', {'dataset': dataset})
+    versions = DatasetVersion.objects.filter(dataset=dataset).order_by('-created_at')
+    return render(request, 'frontend/dataset_versions.html', {
+        'dataset': dataset,
+        'versions': versions
+    })
 
 def logout_view(request):
     logout(request)
@@ -172,3 +173,78 @@ def category_create(request):
             return redirect('categories')
 
     return render(request, 'frontend/category_create.html')
+
+@login_required
+def version_create(request, id):
+    from datasets.models import DatasetVersion
+    dataset = get_object_or_404(Dataset, id=id)
+
+    if request.method == 'POST':
+        version = request.POST.get('version')
+        title = request.POST.get('title')
+        notes = request.POST.get('notes')
+        file = request.FILES.get('file')
+
+        if not version or not file:
+            return render(request, 'frontend/version_create.html', {
+                'dataset': dataset,
+                'error': 'Versão e ficheiro são obrigatórios.'
+            })
+
+        if DatasetVersion.objects.filter(dataset=dataset, version=version).exists():
+            return render(request, 'frontend/version_create.html', {
+                'dataset': dataset,
+                'error': f'Já existe a versão {version} neste dataset.'
+            })
+
+        # Marcar versão anterior como não latest
+        DatasetVersion.objects.filter(dataset=dataset, is_latest=True).update(is_latest=False)
+
+        DatasetVersion.objects.create(
+            dataset=dataset,
+            version=version,
+            title=title,
+            notes=notes,
+            file=file,
+            created_by=request.user,
+            is_latest=True
+        )
+
+        messages.success(request, f'Versão {version} criada com sucesso!')
+        return redirect('dataset_versions', dataset.id)
+
+    return render(request, 'frontend/version_create.html', {'dataset': dataset})
+
+@login_required
+def profile(request):
+    if request.method == 'POST':
+        form_type = request.POST.get('form_type')
+
+        if form_type == 'profile':
+            request.user.username = request.POST.get('username')
+            request.user.email = request.POST.get('email')
+            request.user.first_name = request.POST.get('first_name')
+            request.user.last_name = request.POST.get('last_name')
+            request.user.save()
+            messages.success(request, 'Perfil atualizado com sucesso!')
+
+        elif form_type == 'password':
+            current = request.POST.get('current_password')
+            new = request.POST.get('new_password')
+            confirm = request.POST.get('confirm_password')
+
+            if not request.user.check_password(current):
+                messages.error(request, 'Password atual incorreta.')
+            elif new != confirm:
+                messages.error(request, 'As passwords não coincidem.')
+            elif len(new) < 6:
+                messages.error(request, 'A nova password deve ter pelo menos 6 caracteres.')
+            else:
+                request.user.set_password(new)
+                request.user.save()
+                login(request, request.user)
+                messages.success(request, 'Password alterada com sucesso!')
+
+        return redirect('profile')
+
+    return render(request, 'frontend/profile.html')
