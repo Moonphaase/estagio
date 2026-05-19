@@ -137,8 +137,34 @@ def logout_view(request):
 @login_required
 def dataset_delete(request, id):
     dataset = get_object_or_404(Dataset, id=id)
-
     if request.method == 'POST':
         dataset.delete()
-
     return redirect('datasets')
+
+@login_required
+def category_create(request):
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        slug = request.POST.get('slug')
+        description = request.POST.get('description')
+
+        if Category.objects.filter(name=name).exists():
+            return render(request, 'frontend/category_create.html', {
+                'error': f'Já existe uma categoria com o nome "{name}".'
+            })
+
+        if Category.objects.filter(slug=slug).exists():
+            return render(request, 'frontend/category_create.html', {
+                'error': f'Já existe uma categoria com o slug "{slug}".'
+            })
+
+        if name and slug:
+            Category.objects.create(
+                name=name,
+                slug=slug,
+                description=description
+            )
+            messages.success(request, 'Categoria criada com sucesso!')
+            return redirect('categories')
+
+    return render(request, 'frontend/category_create.html')

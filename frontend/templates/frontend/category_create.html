@@ -1,0 +1,62 @@
+{% extends "frontend/base.html" %}
+
+{% block title %}Criar Categoria{% endblock %}
+{% block page_title %}Nova Categoria{% endblock %}
+{% block nav_categories %}bg-gray-100 font-medium text-gray-900{% endblock %}
+
+{% block content %}
+
+{% if error %}
+<div class="mb-4 max-w-2xl text-sm text-red-500 border border-red-200 bg-red-50 rounded px-3 py-2">
+    {{ error }}
+</div>
+{% endif %}
+
+<div class="bg-white rounded-lg border border-gray-200 max-w-2xl p-6">
+    <form method="POST">
+        {% csrf_token %}
+
+        <div class="mb-4">
+            <label class="block text-xs text-gray-500 mb-1">Nome</label>
+            <input type="text" name="name" placeholder="ex: Saúde, Finanças, Educação" required
+                class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400">
+        </div>
+
+        <div class="mb-4">
+            <label class="block text-xs text-gray-500 mb-1">Slug</label>
+            <input type="text" name="slug" id="slug" placeholder="ex: saude, financas, educacao" required
+                class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400">
+            <p class="text-xs text-gray-400 mt-1">Gerado automaticamente a partir do nome. Só letras minúsculas, números e hífens.</p>
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-xs text-gray-500 mb-1">Descrição</label>
+            <textarea name="description" rows="3" placeholder="Descreve brevemente esta categoria…"
+                class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400"></textarea>
+        </div>
+
+        <div class="flex gap-2">
+            <button type="submit" class="bg-blue-600 text-white text-sm px-4 py-2 rounded hover:bg-blue-700">
+                Criar Categoria
+            </button>
+            <a href="/categories/" class="text-sm text-gray-500 px-4 py-2 rounded border border-gray-200 hover:bg-gray-50">
+                Cancelar
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.querySelector('input[name="name"]').addEventListener('input', function () {
+        const slug = this.value
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9\s-]/g, '')
+            .trim()
+            .replace(/\s+/g, '-');
+        document.getElementById('slug').value = slug;
+    });
+</script>
+
+{% endblock %}

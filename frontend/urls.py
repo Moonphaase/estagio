@@ -11,6 +11,7 @@ urlpatterns = [
     path('datasets/create/', views.dataset_create, name='dataset_create'),
     path('datasets/<int:id>/', views.dataset_detail, name='dataset_detail'),
     path('categories/', views.categories, name='categories'),
+    path('categories/create/', views.category_create, name='category_create'),
     path('profile/', views.profile, name='profile'),
     path('datasets/<int:id>/edit/', views.dataset_edit, name='dataset_edit'),
     path('datasets/<int:id>/versions/', views.dataset_versions, name='dataset_versions'),
