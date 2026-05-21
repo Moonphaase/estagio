@@ -87,6 +87,7 @@ estagio/
 
 Desenvolvido por João, Chico e Marco.
 
-<img width="736" height="776" alt="foto qualidade sigma" src="https://github.com/user-attachments/assets/a32f4e84-5a4b-45fa-b6af-1ab36447f9ed" />
+<img width="474" height="632" alt="oi" src="https://github.com/user-attachments/assets/bdcbd7e9-0ab9-4169-9ee3-ed86bc1a337c" />
+
 
 
