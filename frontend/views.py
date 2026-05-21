@@ -126,9 +126,11 @@ def dataset_versions(request, id):
     from datasets.models import DatasetVersion
     dataset = get_object_or_404(Dataset, id=id)
     versions = DatasetVersion.objects.filter(dataset=dataset).order_by('-created_at')
+    is_owner = dataset.owner == request.user
     return render(request, 'frontend/dataset_versions.html', {
         'dataset': dataset,
-        'versions': versions
+        'versions': versions,
+        'is_owner': is_owner,
     })
 
 def logout_view(request):
@@ -197,7 +199,6 @@ def version_create(request, id):
                 'error': f'Já existe a versão {version} neste dataset.'
             })
 
-        # Marcar versão anterior como não latest
         DatasetVersion.objects.filter(dataset=dataset, is_latest=True).update(is_latest=False)
 
         DatasetVersion.objects.create(
