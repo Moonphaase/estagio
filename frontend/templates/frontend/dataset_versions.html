@@ -22,7 +22,7 @@
 <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
     <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
         <h2 class="text-sm font-semibold text-gray-700">Versões</h2>
-        {% if request.user == dataset.owner %}
+        {% if is_owner %}
         <a href="/datasets/{{ dataset.pk }}/versions/create/" class="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700">+ Nova Versão</a>
         {% endif %}
     </div>
