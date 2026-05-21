@@ -15,7 +15,7 @@ Projeto desenvolvido em Django no âmbito de estágio/projeto académico.
 ### 1. Clonar o repositório
 
 ```bash
-git clone <URL_DO_REPOSITORIO>
+git clone https://github.com/chicobanza13/estagio
 cd estagio
 ```
 
