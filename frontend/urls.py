@@ -14,8 +14,11 @@ urlpatterns = [
     path('categories/create/', views.category_create, name='category_create'),
     path('profile/', views.profile, name='profile'),
     path('datasets/<int:id>/edit/', views.dataset_edit, name='dataset_edit'),
-    path('datasets/<int:id>/versions/create/', views.version_create, name='version_create'),  # ← subiu
+    path('datasets/<int:id>/versions/create/', views.version_create, name='version_create'),
     path('datasets/<int:id>/versions/', views.dataset_versions, name='dataset_versions'),
     path('logout/', views.logout_view, name='logout'),
     path('datasets/<int:id>/delete/', views.dataset_delete, name='dataset_delete'),
+    path('users/', views.users, name='users'),
+    path('users/<int:id>/edit/', views.user_edit, name='user_edit'),
+    path('users/<int:id>/delete/', views.user_delete, name='user_delete'),
 ]

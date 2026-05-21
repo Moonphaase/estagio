@@ -249,3 +249,48 @@ def profile(request):
         return redirect('profile')
 
     return render(request, 'frontend/profile.html')
+
+
+@login_required
+def users(request):
+    if not request.user.is_staff:
+        messages.error(request, 'Não tens permissão para ver esta página.')
+        return redirect('dashboard')
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    all_users = User.objects.all().order_by('date_joined')
+    return render(request, 'frontend/users.html', {'users': all_users})
+
+
+@login_required
+def user_edit(request, id):
+    if not request.user.is_staff:
+        messages.error(request, 'Não tens permissão para editar utilizadores.')
+        return redirect('dashboard')
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    edited_user = get_object_or_404(User, id=id)
+    if request.method == 'POST':
+        edited_user.username   = request.POST.get('username')
+        edited_user.email      = request.POST.get('email')
+        edited_user.first_name = request.POST.get('first_name')
+        edited_user.last_name  = request.POST.get('last_name')
+        edited_user.is_staff   = request.POST.get('is_staff') == 'on'
+        edited_user.is_active  = request.POST.get('is_active') == 'on'
+        edited_user.save()
+        messages.success(request, 'Utilizador atualizado com sucesso!')
+        return redirect('users')
+    return render(request, 'frontend/user_edit.html', {'edited_user': edited_user})
+
+
+@login_required
+def user_delete(request, id):
+    if not request.user.is_staff:
+        return redirect('dashboard')
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    edited_user = get_object_or_404(User, id=id)
+    if request.method == 'POST':
+        edited_user.delete()
+        messages.success(request, 'Utilizador apagado com sucesso.')
+    return redirect('users')
