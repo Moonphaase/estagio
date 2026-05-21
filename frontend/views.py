@@ -58,8 +58,15 @@ def register_view(request):
 
 @login_required
 def dataset_detail(request, id):
+    from datasets.models import DatasetVersion
     dataset = get_object_or_404(Dataset, id=id)
-    return render(request, 'frontend/dataset_detail.html', {'dataset': dataset})
+    versions = DatasetVersion.objects.filter(dataset=dataset).order_by('-created_at')
+    is_owner = dataset.owner == request.user
+    return render(request, 'frontend/dataset_detail.html', {
+        'dataset': dataset,
+        'versions': versions,
+        'is_owner': is_owner,
+    })
 
 @login_required
 def dataset_create(request):
@@ -294,3 +301,29 @@ def user_delete(request, id):
         edited_user.delete()
         messages.success(request, 'Utilizador apagado com sucesso.')
     return redirect('users')
+
+
+@login_required
+def version_delete(request, id, version_id):
+    import os
+    from datasets.models import DatasetVersion
+    dataset = get_object_or_404(Dataset, id=id)
+    version = get_object_or_404(DatasetVersion, id=version_id, dataset=dataset)
+
+    if dataset.owner != request.user and not request.user.is_staff:
+        messages.error(request, 'Não tens permissão para apagar esta versão.')
+        return redirect('dataset_versions', dataset.id)
+
+    if request.method == 'POST':
+        was_latest = version.is_latest
+        if version.file and os.path.exists(version.file.path):
+            os.remove(version.file.path)
+        version.delete()
+        if was_latest:
+            next_version = DatasetVersion.objects.filter(dataset=dataset).order_by('-created_at').first()
+            if next_version:
+                next_version.is_latest = True
+                next_version.save(update_fields=['is_latest'])
+        messages.success(request, 'Versão apagada com sucesso.')
+
+    return redirect('dataset_versions', dataset.id)
