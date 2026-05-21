@@ -86,3 +86,7 @@ estagio/
 ## Autor
 
 Desenvolvido por João, Chico e Marco.
+
+<img width="736" height="776" alt="foto qualidade sigma" src="https://github.com/user-attachments/assets/a32f4e84-5a4b-45fa-b6af-1ab36447f9ed" />
+
+
