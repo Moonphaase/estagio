@@ -3,7 +3,6 @@ from rest_framework import serializers
 
 User = get_user_model()
 
-
 class RegisterSerializer(serializers.ModelSerializer):
     password  = serializers.CharField(write_only=True, min_length=8)
     password2 = serializers.CharField(write_only=True, label="Confirmar password")
@@ -12,6 +11,11 @@ class RegisterSerializer(serializers.ModelSerializer):
         model  = User
         fields = ["id", "username", "email", "first_name", "last_name",
                   "password", "password2"]
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Este email já está registado.")
+        return value
 
     def validate(self, data):
         if data["password"] != data["password2"]:
