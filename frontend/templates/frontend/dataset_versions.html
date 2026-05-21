@@ -34,22 +34,41 @@
                 <th class="px-4 py-2 text-left">Notas</th>
                 <th class="px-4 py-2 text-left">Data</th>
                 <th class="px-4 py-2 text-left">Criado por</th>
+                <th class="px-4 py-2 text-left"></th>
             </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
             {% if versions %}
                 {% for version in versions %}
                     <tr>
-                        <td class="px-4 py-3 text-gray-700">{{ version.version }}</td>
-                        <td class="px-4 py-3 text-gray-700">{{ version.file.name|default:"—" }}</td>
+                        <td class="px-4 py-3 text-gray-700">
+                            {{ version.version }}
+                            {% if version.is_latest %}
+                                <span class="ml-1 text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700">latest</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-gray-500 text-xs">{{ version.file.name|default:"—" }}</td>
                         <td class="px-4 py-3 text-gray-700">{{ version.notes|default:"—" }}</td>
                         <td class="px-4 py-3 text-gray-700">{{ version.created_at|date:"d/m/Y H:i" }}</td>
                         <td class="px-4 py-3 text-gray-700">{{ version.created_by|default:"—" }}</td>
+                        <td class="px-4 py-3">
+                            <div class="flex gap-3">
+                                {% if version.file %}
+                                <a href="/media/{{ version.file.name }}" download class="text-xs text-blue-600 hover:underline">Download</a>
+                                {% endif %}
+                                {% if is_owner %}
+                                <form method="post" action="/datasets/{{ dataset.pk }}/versions/{{ version.pk }}/delete/" onsubmit="return confirm('Apagar versão {{ version.version }}?')">
+                                    {% csrf_token %}
+                                    <button type="submit" class="text-xs text-red-500 hover:underline">Apagar</button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
                     </tr>
                 {% endfor %}
             {% else %}
                 <tr>
-                    <td colspan="5" class="px-4 py-6 text-center text-gray-400">Ainda não há versões.</td>
+                    <td colspan="6" class="px-4 py-6 text-center text-gray-400">Ainda não há versões.</td>
                 </tr>
             {% endif %}
         </tbody>
