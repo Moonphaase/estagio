@@ -2,26 +2,46 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
-from datasets.models import Dataset
+from django.db.models import Q
+from datasets.models import Dataset, DatasetVersion
 from categories.models import Category
+
 
 @login_required
 def dashboard(request):
-    recent_datasets = Dataset.objects.all().order_by('-created_at')[:5]
-    total_datasets = Dataset.objects.count()
+    if request.user.is_staff:
+        recent_datasets = Dataset.objects.all().order_by('-created_at')[:5]
+        total_datasets = Dataset.objects.count()
+        total_versions = DatasetVersion.objects.count()
+    else:
+        qs = Dataset.objects.filter(
+            Q(visibility='public') | Q(owner=request.user)
+        )
+        recent_datasets = qs.order_by('-created_at')[:5]
+        total_datasets = qs.count()
+        total_versions = DatasetVersion.objects.filter(dataset__in=qs).count()
+
     total_categories = Category.objects.count()
     my_datasets = Dataset.objects.filter(owner=request.user).count()
     return render(request, 'frontend/dashboard.html', {
         'recent_datasets': recent_datasets,
         'total_datasets': total_datasets,
         'total_categories': total_categories,
+        'total_versions': total_versions,
         'my_datasets': my_datasets,
     })
 
+
 @login_required
 def datasets(request):
-    datasets_list = Dataset.objects.all().order_by('-created_at')
+    if request.user.is_staff:
+        datasets_list = Dataset.objects.all().order_by('-created_at')
+    else:
+        datasets_list = Dataset.objects.filter(
+            Q(visibility='public') | Q(owner=request.user)
+        ).order_by('-created_at')
     return render(request, 'frontend/datasets.html', {'datasets': datasets_list})
+
 
 def login_view(request):
     if request.method == 'POST':
@@ -35,7 +55,13 @@ def login_view(request):
             return render(request, 'frontend/login.html', {'error': 'Email ou password incorretos'})
     return render(request, 'frontend/login.html')
 
+
+@login_required
 def register_view(request):
+    if not request.user.is_staff:
+        messages.error(request, 'Apenas administradores podem registar novos utilizadores.')
+        return redirect('dashboard')
+
     if request.method == 'POST':
         username = request.POST.get('username')
         email = request.POST.get('email')
@@ -50,16 +76,22 @@ def register_view(request):
         if User.objects.filter(email=email).exists():
             return render(request, 'frontend/register.html', {'error': 'Email já está registado'})
 
-        user = User.objects.create_user(username=username, email=email, password=password)
-        login(request, user)
-        return redirect('dashboard')
+        User.objects.create_user(username=username, email=email, password=password)
+        messages.success(request, 'Utilizador criado com sucesso!')
+        return redirect('users')
 
     return render(request, 'frontend/register.html')
 
+
 @login_required
 def dataset_detail(request, id):
-    from datasets.models import DatasetVersion
     dataset = get_object_or_404(Dataset, id=id)
+
+    # Bloquear acesso a datasets privados de outros utilizadores
+    if dataset.visibility == 'private' and dataset.owner != request.user and not request.user.is_staff:
+        messages.error(request, 'Não tens permissão para ver este dataset.')
+        return redirect('datasets')
+
     versions = DatasetVersion.objects.filter(dataset=dataset).order_by('-created_at')
     is_owner = dataset.owner == request.user
     return render(request, 'frontend/dataset_detail.html', {
@@ -67,6 +99,7 @@ def dataset_detail(request, id):
         'versions': versions,
         'is_owner': is_owner,
     })
+
 
 @login_required
 def dataset_create(request):
@@ -98,14 +131,21 @@ def dataset_create(request):
     categories = Category.objects.all()
     return render(request, 'frontend/dataset_create.html', {'categories': categories})
 
+
 @login_required
 def categories(request):
     all_categories = Category.objects.all()
     return render(request, 'frontend/categories.html', {'categories': all_categories})
 
+
 @login_required
 def dataset_edit(request, id):
     dataset = get_object_or_404(Dataset, id=id)
+
+    if dataset.owner != request.user and not request.user.is_staff:
+        messages.error(request, 'Não tens permissão para editar este dataset.')
+        return redirect('dataset_detail', dataset.id)
+
     if request.method == 'POST':
         dataset.name = request.POST.get('name')
         dataset.description = request.POST.get('description')
@@ -128,10 +168,15 @@ def dataset_edit(request, id):
     categories = Category.objects.all()
     return render(request, 'frontend/dataset_edit.html', {'dataset': dataset, 'categories': categories})
 
+
 @login_required
 def dataset_versions(request, id):
-    from datasets.models import DatasetVersion
     dataset = get_object_or_404(Dataset, id=id)
+
+    if dataset.visibility == 'private' and dataset.owner != request.user and not request.user.is_staff:
+        messages.error(request, 'Não tens permissão para ver este dataset.')
+        return redirect('datasets')
+
     versions = DatasetVersion.objects.filter(dataset=dataset).order_by('-created_at')
     is_owner = dataset.owner == request.user
     return render(request, 'frontend/dataset_versions.html', {
@@ -140,16 +185,24 @@ def dataset_versions(request, id):
         'is_owner': is_owner,
     })
 
+
 def logout_view(request):
     logout(request)
     return redirect('login')
 
+
 @login_required
 def dataset_delete(request, id):
     dataset = get_object_or_404(Dataset, id=id)
+
+    if dataset.owner != request.user and not request.user.is_staff:
+        messages.error(request, 'Não tens permissão para apagar este dataset.')
+        return redirect('dataset_detail', dataset.id)
+
     if request.method == 'POST':
         dataset.delete()
     return redirect('datasets')
+
 
 @login_required
 def category_create(request):
@@ -183,10 +236,14 @@ def category_create(request):
 
     return render(request, 'frontend/category_create.html')
 
+
 @login_required
 def version_create(request, id):
-    from datasets.models import DatasetVersion
     dataset = get_object_or_404(Dataset, id=id)
+
+    if dataset.owner != request.user and not request.user.is_staff:
+        messages.error(request, 'Não tens permissão para criar versões neste dataset.')
+        return redirect('dataset_detail', dataset.id)
 
     if request.method == 'POST':
         version = request.POST.get('version')
@@ -222,6 +279,7 @@ def version_create(request, id):
         return redirect('dataset_versions', dataset.id)
 
     return render(request, 'frontend/version_create.html', {'dataset': dataset})
+
 
 @login_required
 def profile(request):
@@ -306,7 +364,6 @@ def user_delete(request, id):
 @login_required
 def version_delete(request, id, version_id):
     import os
-    from datasets.models import DatasetVersion
     dataset = get_object_or_404(Dataset, id=id)
     version = get_object_or_404(DatasetVersion, id=version_id, dataset=dataset)
 

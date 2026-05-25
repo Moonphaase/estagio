@@ -77,6 +77,25 @@ class DatasetViewSet(viewsets.ModelViewSet):
         self.check_object_permissions(request, instance)
         return super().destroy(request, *args, **kwargs)
 
+    @action(detail=True, methods=["get"], url_path="latest/download")
+    def latest_download(self, request, pk=None):
+        """GET /api/datasets/{id}/latest/download/"""
+        dataset = self.get_object()
+        version = dataset.versions.filter(is_latest=True).first()
+        if not version:
+            return Response(
+                {"detail": "Este dataset não tem versões."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        if not version.file or not os.path.exists(version.file.path):
+            return Response(
+                {"detail": "Ficheiro não encontrado no servidor."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        response = FileResponse(version.file.open("rb"), as_attachment=True)
+        response["Content-Length"] = version.file_size
+        return response
+
 
 class DatasetVersionViewSet(viewsets.ModelViewSet):
     """

@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from .serializers import RegisterSerializer, UserSerializer
+from .serializers import RegisterSerializer, UserSerializer, EmailTokenObtainPairSerializer
 
 User = get_user_model()
 
@@ -30,6 +30,7 @@ class RegisterView(generics.CreateAPIView):
 
 class LoginView(TokenObtainPairView):
     """POST /api/auth/login/  (email + password → access + refresh)"""
+    serializer_class   = EmailTokenObtainPairSerializer
     permission_classes = [permissions.AllowAny]
 
 
