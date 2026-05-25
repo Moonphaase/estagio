@@ -1,17 +1,19 @@
 from pathlib import Path
 from datetime import timedelta
 import os
+from decouple import config, Csv
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-SECRET_KEY = 'django-insecure-ba1nx#5aqw4jc7z-n%%mj*)ik4&3j7q!7o8w-1t0t$@kd9(s)3'
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-ba1nx#5aqw4jc7z-n%%mj*)ik4&3j7q!7o8w-1t0t$@kd9(s)3')
 
-DEBUG = True
+DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -31,6 +33,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -59,14 +62,9 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'estagio',
-        'USER': 'postgres',
-        'PASSWORD': 'joao',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
+    'default': dj_database_url.config(
+        default=config('DATABASE_URL', default='postgres://postgres:joao@localhost:5432/estagio')
+    )
 }
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -82,6 +80,8 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesFactory'
 
 AUTH_USER_MODEL = 'accounts.CustomUser'
 LOGIN_URL = 'login'
@@ -108,8 +108,6 @@ SIMPLE_JWT = {
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': SECRET_KEY,
 }
-
-# ── Logging ───────────────────────────────────────────────────────────────────
 
 LOGS_DIR = BASE_DIR / 'logs'
 LOGS_DIR.mkdir(exist_ok=True)
