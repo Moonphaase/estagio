@@ -1,3 +1,5 @@
+import logging
+
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
@@ -5,6 +7,8 @@ from django.contrib import messages
 from django.db.models import Q
 from datasets.models import Dataset, DatasetVersion
 from categories.models import Category
+
+logger = logging.getLogger('accounts')
 
 
 @login_required
@@ -34,13 +38,37 @@ def dashboard(request):
 
 @login_required
 def datasets(request):
+    search           = request.GET.get('search', '').strip()
+    category_filter  = request.GET.get('category', '')
+    visibility_filter = request.GET.get('visibility', '')
+    status_filter    = request.GET.get('status', '')
+
     if request.user.is_staff:
-        datasets_list = Dataset.objects.all().order_by('-created_at')
+        qs = Dataset.objects.all()
     else:
-        datasets_list = Dataset.objects.filter(
+        qs = Dataset.objects.filter(
             Q(visibility='public') | Q(owner=request.user)
-        ).order_by('-created_at')
-    return render(request, 'frontend/datasets.html', {'datasets': datasets_list})
+        )
+
+    if search:
+        qs = qs.filter(Q(name__icontains=search) | Q(description__icontains=search))
+    if category_filter:
+        qs = qs.filter(category__slug=category_filter)
+    if visibility_filter:
+        qs = qs.filter(visibility=visibility_filter)
+    if status_filter:
+        qs = qs.filter(status=status_filter)
+
+    qs = qs.order_by('-created_at')
+    categories = Category.objects.all()
+    return render(request, 'frontend/datasets.html', {
+        'datasets': qs,
+        'categories': categories,
+        'search': search,
+        'category_filter': category_filter,
+        'visibility_filter': visibility_filter,
+        'status_filter': status_filter,
+    })
 
 
 def login_view(request):
@@ -50,8 +78,10 @@ def login_view(request):
         user = authenticate(request, username=email, password=password)
         if user is not None:
             login(request, user)
+            logger.info(f'Login: {email}')
             return redirect('dashboard')
         else:
+            logger.warning(f'Login falhado: {email}')
             return render(request, 'frontend/login.html', {'error': 'Email ou password incorretos'})
     return render(request, 'frontend/login.html')
 
@@ -64,7 +94,7 @@ def register_view(request):
 
     if request.method == 'POST':
         username = request.POST.get('username')
-        email = request.POST.get('email')
+        email    = request.POST.get('email')
         password = request.POST.get('password')
 
         from django.contrib.auth import get_user_model
@@ -72,11 +102,11 @@ def register_view(request):
 
         if User.objects.filter(username=username).exists():
             return render(request, 'frontend/register.html', {'error': 'Nome de utilizador já existe'})
-
         if User.objects.filter(email=email).exists():
             return render(request, 'frontend/register.html', {'error': 'Email já está registado'})
 
         User.objects.create_user(username=username, email=email, password=password)
+        logger.info(f'Utilizador criado: {email} por {request.user.email}')
         messages.success(request, 'Utilizador criado com sucesso!')
         return redirect('users')
 
@@ -87,7 +117,6 @@ def register_view(request):
 def dataset_detail(request, id):
     dataset = get_object_or_404(Dataset, id=id)
 
-    # Bloquear acesso a datasets privados de outros utilizadores
     if dataset.visibility == 'private' and dataset.owner != request.user and not request.user.is_staff:
         messages.error(request, 'Não tens permissão para ver este dataset.')
         return redirect('datasets')
@@ -104,11 +133,11 @@ def dataset_detail(request, id):
 @login_required
 def dataset_create(request):
     if request.method == 'POST':
-        name = request.POST.get('name')
+        name        = request.POST.get('name')
         description = request.POST.get('description')
         category_id = request.POST.get('category')
-        visibility = request.POST.get('visibility', 'public')
-        status_val = request.POST.get('status', 'draft')
+        visibility  = request.POST.get('visibility', 'public')
+        status_val  = request.POST.get('status', 'draft')
 
         category = None
         if category_id:
@@ -118,13 +147,10 @@ def dataset_create(request):
                 pass
 
         dataset = Dataset.objects.create(
-            name=name,
-            description=description,
-            category=category,
-            owner=request.user,
-            visibility=visibility,
-            status=status_val
+            name=name, description=description, category=category,
+            owner=request.user, visibility=visibility, status=status_val
         )
+        logger.info(f'Dataset criado: "{dataset.name}" por {request.user.email}')
         messages.success(request, 'Dataset criado com sucesso!')
         return redirect('dataset_detail', dataset.id)
 
@@ -147,11 +173,11 @@ def dataset_edit(request, id):
         return redirect('dataset_detail', dataset.id)
 
     if request.method == 'POST':
-        dataset.name = request.POST.get('name')
+        dataset.name        = request.POST.get('name')
         dataset.description = request.POST.get('description')
-        category_id = request.POST.get('category')
-        dataset.visibility = request.POST.get('visibility', 'public')
-        dataset.status = request.POST.get('status', 'draft')
+        category_id         = request.POST.get('category')
+        dataset.visibility  = request.POST.get('visibility', 'public')
+        dataset.status      = request.POST.get('status', 'draft')
 
         if category_id:
             try:
@@ -162,6 +188,7 @@ def dataset_edit(request, id):
             dataset.category = None
 
         dataset.save()
+        logger.info(f'Dataset editado: "{dataset.name}" por {request.user.email}')
         messages.success(request, 'Dataset atualizado com sucesso!')
         return redirect('dataset_detail', dataset.id)
 
@@ -187,6 +214,7 @@ def dataset_versions(request, id):
 
 
 def logout_view(request):
+    logger.info(f'Logout: {request.user.email if request.user.is_authenticated else "anónimo"}')
     logout(request)
     return redirect('login')
 
@@ -200,6 +228,7 @@ def dataset_delete(request, id):
         return redirect('dataset_detail', dataset.id)
 
     if request.method == 'POST':
+        logger.info(f'Dataset apagado: "{dataset.name}" por {request.user.email}')
         dataset.delete()
     return redirect('datasets')
 
@@ -211,26 +240,22 @@ def category_create(request):
         return redirect('categories')
 
     if request.method == 'POST':
-        name = request.POST.get('name')
-        slug = request.POST.get('slug')
+        name        = request.POST.get('name')
+        slug        = request.POST.get('slug')
         description = request.POST.get('description')
 
         if Category.objects.filter(name=name).exists():
             return render(request, 'frontend/category_create.html', {
                 'error': f'Já existe uma categoria com o nome "{name}".'
             })
-
         if Category.objects.filter(slug=slug).exists():
             return render(request, 'frontend/category_create.html', {
                 'error': f'Já existe uma categoria com o slug "{slug}".'
             })
 
         if name and slug:
-            Category.objects.create(
-                name=name,
-                slug=slug,
-                description=description
-            )
+            Category.objects.create(name=name, slug=slug, description=description)
+            logger.info(f'Categoria criada: "{name}" por {request.user.email}')
             messages.success(request, 'Categoria criada com sucesso!')
             return redirect('categories')
 
@@ -247,34 +272,26 @@ def version_create(request, id):
 
     if request.method == 'POST':
         version = request.POST.get('version')
-        title = request.POST.get('title')
-        notes = request.POST.get('notes')
-        file = request.FILES.get('file')
+        title   = request.POST.get('title')
+        notes   = request.POST.get('notes')
+        file    = request.FILES.get('file')
 
         if not version or not file:
             return render(request, 'frontend/version_create.html', {
-                'dataset': dataset,
-                'error': 'Versão e ficheiro são obrigatórios.'
+                'dataset': dataset, 'error': 'Versão e ficheiro são obrigatórios.'
             })
 
         if DatasetVersion.objects.filter(dataset=dataset, version=version).exists():
             return render(request, 'frontend/version_create.html', {
-                'dataset': dataset,
-                'error': f'Já existe a versão {version} neste dataset.'
+                'dataset': dataset, 'error': f'Já existe a versão {version} neste dataset.'
             })
 
         DatasetVersion.objects.filter(dataset=dataset, is_latest=True).update(is_latest=False)
-
         DatasetVersion.objects.create(
-            dataset=dataset,
-            version=version,
-            title=title,
-            notes=notes,
-            file=file,
-            created_by=request.user,
-            is_latest=True
+            dataset=dataset, version=version, title=title,
+            notes=notes, file=file, created_by=request.user, is_latest=True
         )
-
+        logger.info(f'Versão criada: "{dataset.name}" v{version} por {request.user.email}')
         messages.success(request, f'Versão {version} criada com sucesso!')
         return redirect('dataset_versions', dataset.id)
 
@@ -287,16 +304,16 @@ def profile(request):
         form_type = request.POST.get('form_type')
 
         if form_type == 'profile':
-            request.user.username = request.POST.get('username')
-            request.user.email = request.POST.get('email')
+            request.user.username   = request.POST.get('username')
+            request.user.email      = request.POST.get('email')
             request.user.first_name = request.POST.get('first_name')
-            request.user.last_name = request.POST.get('last_name')
+            request.user.last_name  = request.POST.get('last_name')
             request.user.save()
             messages.success(request, 'Perfil atualizado com sucesso!')
 
         elif form_type == 'password':
             current = request.POST.get('current_password')
-            new = request.POST.get('new_password')
+            new     = request.POST.get('new_password')
             confirm = request.POST.get('confirm_password')
 
             if not request.user.check_password(current):
@@ -343,6 +360,7 @@ def user_edit(request, id):
         edited_user.is_staff   = request.POST.get('is_staff') == 'on'
         edited_user.is_active  = request.POST.get('is_active') == 'on'
         edited_user.save()
+        logger.info(f'Utilizador editado: {edited_user.email} por {request.user.email}')
         messages.success(request, 'Utilizador atualizado com sucesso!')
         return redirect('users')
     return render(request, 'frontend/user_edit.html', {'edited_user': edited_user})
@@ -356,6 +374,7 @@ def user_delete(request, id):
     User = get_user_model()
     edited_user = get_object_or_404(User, id=id)
     if request.method == 'POST':
+        logger.info(f'Utilizador apagado: {edited_user.email} por {request.user.email}')
         edited_user.delete()
         messages.success(request, 'Utilizador apagado com sucesso.')
     return redirect('users')
@@ -375,6 +394,7 @@ def version_delete(request, id, version_id):
         was_latest = version.is_latest
         if version.file and os.path.exists(version.file.path):
             os.remove(version.file.path)
+        logger.info(f'Versão apagada: "{dataset.name}" v{version.version} por {request.user.email}')
         version.delete()
         if was_latest:
             next_version = DatasetVersion.objects.filter(dataset=dataset).order_by('-created_at').first()

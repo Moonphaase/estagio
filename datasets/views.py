@@ -1,3 +1,5 @@
+# datasets/views.py — versão completa com logging
+import logging
 import os
 
 from django.db import transaction
@@ -12,12 +14,10 @@ from .models import Dataset, DatasetVersion
 from .permissions import IsOwnerOrAdmin
 from .serializers import DatasetSerializer, DatasetListSerializer, DatasetVersionSerializer
 
+logger = logging.getLogger('datasets')
+
 
 class DatasetViewSet(viewsets.ModelViewSet):
-    """
-    /api/datasets/
-    /api/datasets/{id}/
-    """
     queryset = Dataset.objects.select_related("owner", "category", "metadata")
     filter_backends  = [filters.SearchFilter, filters.OrderingFilter]
     search_fields    = ["name", "description", "category__name"]
@@ -37,17 +37,13 @@ class DatasetViewSet(viewsets.ModelViewSet):
         qs = super().get_queryset()
         user = self.request.user
 
-        # Admins vêem tudo
         if user.is_authenticated and user.is_staff:
             pass
         elif user.is_authenticated:
-            # Utilizadores vêem datasets públicos + os seus próprios
             qs = qs.filter(Q(visibility="public") | Q(owner=user))
         else:
-            # Guests vêem apenas públicos e publicados
             qs = qs.filter(visibility="public", status="published")
 
-        # Filtros por query string
         category   = self.request.query_params.get("category")
         owner      = self.request.query_params.get("owner")
         visibility = self.request.query_params.get("visibility")
@@ -65,16 +61,20 @@ class DatasetViewSet(viewsets.ModelViewSet):
         return qs.order_by("-created_at")
 
     def perform_create(self, serializer):
-        serializer.save(owner=self.request.user)
+        dataset = serializer.save(owner=self.request.user)
+        logger.info(f'Dataset criado: "{dataset.name}" por {self.request.user.email}')
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         self.check_object_permissions(request, instance)
-        return super().update(request, *args, **kwargs)
+        response = super().update(request, *args, **kwargs)
+        logger.info(f'Dataset editado: "{instance.name}" por {request.user.email}')
+        return response
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         self.check_object_permissions(request, instance)
+        logger.info(f'Dataset apagado: "{instance.name}" por {request.user.email}')
         return super().destroy(request, *args, **kwargs)
 
     @action(detail=True, methods=["get"], url_path="latest/download")
@@ -92,17 +92,13 @@ class DatasetViewSet(viewsets.ModelViewSet):
                 {"detail": "Ficheiro não encontrado no servidor."},
                 status=status.HTTP_404_NOT_FOUND,
             )
+        logger.info(f'Download latest: "{dataset.name}" v{version.version} por {request.user}')
         response = FileResponse(version.file.open("rb"), as_attachment=True)
         response["Content-Length"] = version.file_size
         return response
 
 
 class DatasetVersionViewSet(viewsets.ModelViewSet):
-    """
-    /api/datasets/{dataset_pk}/versions/
-    /api/datasets/{dataset_pk}/versions/{id}/
-    /api/datasets/{dataset_pk}/versions/{id}/download/
-    """
     serializer_class   = DatasetVersionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -117,25 +113,23 @@ class DatasetVersionViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         dataset = self.get_dataset()
 
-        # Só o dono ou admin pode criar versões
         if dataset.owner != self.request.user and not self.request.user.is_staff:
             raise PermissionDenied("Apenas o dono ou um admin pode criar versões.")
 
         version_number = serializer.validated_data.get("version")
 
         with transaction.atomic():
-            # Garantir unicidade do version_number
             if dataset.versions.filter(version=version_number).exists():
                 raise PermissionDenied(f"A versão '{version_number}' já existe neste dataset.")
 
-            # Remover is_latest das versões anteriores
             dataset.versions.filter(is_latest=True).update(is_latest=False)
 
-            serializer.save(
+            version = serializer.save(
                 dataset=dataset,
                 created_by=self.request.user,
                 is_latest=True,
             )
+            logger.info(f'Versão criada: "{dataset.name}" v{version.version} por {self.request.user.email}')
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -145,9 +139,9 @@ class DatasetVersionViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("Apenas o dono ou um admin pode apagar versões.")
 
         was_latest = instance.is_latest
+        logger.info(f'Versão apagada: "{dataset.name}" v{instance.version} por {request.user.email}')
         instance.delete()
 
-        # Se era a latest, promover a versão mais recente restante
         if was_latest:
             next_latest = dataset.versions.order_by("-created_at").first()
             if next_latest:
@@ -170,6 +164,7 @@ class DatasetVersionViewSet(viewsets.ModelViewSet):
                 {"detail": "Ficheiro não encontrado no servidor."},
                 status=status.HTTP_404_NOT_FOUND,
             )
+        logger.info(f'Download: v{version.version} do dataset {version.dataset.name} por {request.user}')
         response = FileResponse(version.file.open("rb"), as_attachment=True)
         response["Content-Length"] = version.file_size
         return response
