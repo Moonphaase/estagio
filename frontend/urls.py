@@ -22,7 +22,4 @@ urlpatterns = [
     path('users/', views.users, name='users'),
     path('users/<int:id>/edit/', views.user_edit, name='user_edit'),
     path('users/<int:id>/delete/', views.user_delete, name='user_delete'),
-    path('datasets/<int:id>/comment/', views.comment_create, name='comment_create'),
-    path('datasets/<int:id>/comment/<int:comment_id>/delete/', views.comment_delete, name='comment_delete'),
-    
 ]
