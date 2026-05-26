@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from django.db.models import Q
-from datasets.models import Dataset, DatasetVersion
+from datasets.models import Dataset, DatasetVersion, Comment
 from categories.models import Category
 
 logger = logging.getLogger('accounts')
@@ -38,10 +38,10 @@ def dashboard(request):
 
 @login_required
 def datasets(request):
-    search           = request.GET.get('search', '').strip()
-    category_filter  = request.GET.get('category', '')
+    search            = request.GET.get('search', '').strip()
+    category_filter   = request.GET.get('category', '')
     visibility_filter = request.GET.get('visibility', '')
-    status_filter    = request.GET.get('status', '')
+    status_filter     = request.GET.get('status', '')
 
     if request.user.is_staff:
         qs = Dataset.objects.all()
@@ -122,11 +122,19 @@ def dataset_detail(request, id):
         return redirect('datasets')
 
     versions = DatasetVersion.objects.filter(dataset=dataset).order_by('-created_at')
+    comments = Comment.objects.filter(dataset=dataset).order_by('created_at')
     is_owner = dataset.owner == request.user
+
+    tags = []
+    if hasattr(dataset, 'metadata') and dataset.metadata:
+        tags = dataset.metadata.tags or []
+
     return render(request, 'frontend/dataset_detail.html', {
         'dataset': dataset,
         'versions': versions,
+        'comments': comments,
         'is_owner': is_owner,
+        'tags': tags,
     })
 
 
@@ -138,6 +146,8 @@ def dataset_create(request):
         category_id = request.POST.get('category')
         visibility  = request.POST.get('visibility', 'public')
         status_val  = request.POST.get('status', 'draft')
+        tags_raw    = request.POST.get('tags', '')
+        tags        = [t.strip() for t in tags_raw.split(',') if t.strip()]
 
         category = None
         if category_id:
@@ -146,10 +156,13 @@ def dataset_create(request):
             except Category.DoesNotExist:
                 pass
 
+        from datasets.models import DatasetMetadata
         dataset = Dataset.objects.create(
             name=name, description=description, category=category,
             owner=request.user, visibility=visibility, status=status_val
         )
+        DatasetMetadata.objects.create(dataset=dataset, tags=tags)
+
         logger.info(f'Dataset criado: "{dataset.name}" por {request.user.email}')
         messages.success(request, 'Dataset criado com sucesso!')
         return redirect('dataset_detail', dataset.id)
@@ -178,6 +191,8 @@ def dataset_edit(request, id):
         category_id         = request.POST.get('category')
         dataset.visibility  = request.POST.get('visibility', 'public')
         dataset.status      = request.POST.get('status', 'draft')
+        tags_raw            = request.POST.get('tags', '')
+        tags                = [t.strip() for t in tags_raw.split(',') if t.strip()]
 
         if category_id:
             try:
@@ -188,12 +203,26 @@ def dataset_edit(request, id):
             dataset.category = None
 
         dataset.save()
+
+        from datasets.models import DatasetMetadata
+        metadata, _ = DatasetMetadata.objects.get_or_create(dataset=dataset)
+        metadata.tags = tags
+        metadata.save()
+
         logger.info(f'Dataset editado: "{dataset.name}" por {request.user.email}')
         messages.success(request, 'Dataset atualizado com sucesso!')
         return redirect('dataset_detail', dataset.id)
 
+    tags_str = ''
+    if hasattr(dataset, 'metadata') and dataset.metadata:
+        tags_str = ', '.join(dataset.metadata.tags or [])
+
     categories = Category.objects.all()
-    return render(request, 'frontend/dataset_edit.html', {'dataset': dataset, 'categories': categories})
+    return render(request, 'frontend/dataset_edit.html', {
+        'dataset': dataset,
+        'categories': categories,
+        'tags_str': tags_str,
+    })
 
 
 @login_required
@@ -404,3 +433,27 @@ def version_delete(request, id, version_id):
         messages.success(request, 'Versão apagada com sucesso.')
 
     return redirect('dataset_versions', dataset.id)
+
+
+@login_required
+def comment_create(request, id):
+    dataset = get_object_or_404(Dataset, id=id)
+    if request.method == 'POST':
+        content = request.POST.get('content', '').strip()
+        if content:
+            Comment.objects.create(
+                dataset=dataset,
+                author=request.user,
+                content=content
+            )
+    return redirect('dataset_detail', dataset.id)
+
+
+@login_required
+def comment_delete(request, id, comment_id):
+    dataset = get_object_or_404(Dataset, id=id)
+    comment = get_object_or_404(Comment, id=comment_id, dataset=dataset)
+    if request.user == comment.author or request.user.is_staff:
+        if request.method == 'POST':
+            comment.delete()
+    return redirect('dataset_detail', dataset.id)

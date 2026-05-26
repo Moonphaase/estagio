@@ -39,13 +39,28 @@
             </select>
         </div>
 
-        <div class="mb-6">
+        <div class="mb-4">
             <label class="block text-xs text-gray-500 mb-1">Estado</label>
             <select name="status" class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400">
                 <option value="draft" {% if dataset.status == 'draft' %}selected{% endif %}>Rascunho</option>
                 <option value="published" {% if dataset.status == 'published' %}selected{% endif %}>Publicado</option>
                 <option value="archived" {% if dataset.status == 'archived' %}selected{% endif %}>Arquivado</option>
             </select>
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-xs text-gray-500 mb-1">Tags</label>
+            <input type="text" name="tags" id="tags-input" value="{{ tags_str }}"
+                class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400"
+                placeholder="Ex: população, lisboa, 2024">
+            <p class="text-xs text-gray-400 mt-1">Separa as tags por vírgula.</p>
+            <div id="tags-preview" class="flex flex-wrap gap-1 mt-2">
+                {% if tags_str %}
+                    {% for tag in tags_str.split(',') %}
+                        <span class="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">{{ tag|trim }}</span>
+                    {% endfor %}
+                {% endif %}
+            </div>
         </div>
 
         <div class="flex gap-2">
@@ -75,11 +90,9 @@
 
 <!-- Modal de confirmação -->
 <div id="delete-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-    <!-- Fundo escuro -->
     <div class="absolute inset-0 bg-black/50"
          onclick="document.getElementById('delete-modal').classList.add('hidden')"></div>
 
-    <!-- Caixa do modal -->
     <div class="relative bg-white rounded-lg border border-gray-200 shadow-lg p-6 max-w-sm w-full">
         <div class="flex items-center gap-3 mb-3">
             <div class="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
@@ -112,5 +125,15 @@
         </div>
     </div>
 </div>
+
+<script>
+    document.getElementById('tags-input').addEventListener('input', function () {
+        const preview = document.getElementById('tags-preview');
+        const tags = this.value.split(',').map(t => t.trim()).filter(t => t);
+        preview.innerHTML = tags.map(tag =>
+            `<span class="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">${tag}</span>`
+        ).join('');
+    });
+</script>
 
 {% endblock %}

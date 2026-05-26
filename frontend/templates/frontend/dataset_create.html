@@ -34,18 +34,27 @@
             <label class="block text-xs text-gray-500 mb-1">Visibilidade</label>
             <select name="visibility" class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400">
                 <option value="public">Público</option>
-                <option value="private">Privado</option>    
+                <option value="private">Privado</option>
                 <option value="internal">Interno</option>
             </select>
         </div>
 
-        <div class="mb-6">
+        <div class="mb-4">
             <label class="block text-xs text-gray-500 mb-1">Estado</label>
             <select name="status" class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400">
                 <option value="draft">Rascunho</option>
                 <option value="published">Publicado</option>
                 <option value="archived">Arquivado</option>
             </select>
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-xs text-gray-500 mb-1">Tags</label>
+            <input type="text" name="tags" id="tags-input"
+                class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400"
+                placeholder="Ex: população, lisboa, 2024">
+            <p class="text-xs text-gray-400 mt-1">Separa as tags por vírgula.</p>
+            <div id="tags-preview" class="flex flex-wrap gap-1 mt-2"></div>
         </div>
 
         <div class="flex gap-2">
@@ -59,5 +68,15 @@
 
     </form>
 </div>
+
+<script>
+    document.getElementById('tags-input').addEventListener('input', function () {
+        const preview = document.getElementById('tags-preview');
+        const tags = this.value.split(',').map(t => t.trim()).filter(t => t);
+        preview.innerHTML = tags.map(tag =>
+            `<span class="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">${tag}</span>`
+        ).join('');
+    });
+</script>
 
 {% endblock %}
