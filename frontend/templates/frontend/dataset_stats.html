@@ -1,0 +1,90 @@
+{% extends "frontend/base.html" %}
+{% block title %}Estatísticas — {{ dataset.name }}{% endblock %}
+{% block page_title %}Estatísticas de Downloads{% endblock %}
+
+{% block content %}
+<div class="mb-4 flex items-center justify-between">
+    <div>
+        <a href="/datasets/{{ dataset.id }}/" class="text-sm text-blue-600 hover:underline">← Voltar ao dataset</a>
+        <h2 class="text-lg font-semibold text-gray-800 mt-1">{{ dataset.name }}</h2>
+    </div>
+</div>
+
+<!-- Cards de resumo -->
+<div class="grid grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded-lg p-4 border border-gray-200">
+        <p class="text-xs text-gray-500 mb-1">Total de Downloads</p>
+        <p class="text-2xl font-semibold text-gray-800">{{ total_downloads }}</p>
+    </div>
+    <div class="bg-white rounded-lg p-4 border border-gray-200">
+        <p class="text-xs text-gray-500 mb-1">Últimos 7 dias</p>
+        <p class="text-2xl font-semibold text-gray-800">{{ downloads_7_days }}</p>
+    </div>
+    <div class="bg-white rounded-lg p-4 border border-gray-200">
+        <p class="text-xs text-gray-500 mb-1">Últimos 30 dias</p>
+        <p class="text-2xl font-semibold text-gray-800">{{ downloads_30_days }}</p>
+    </div>
+</div>
+
+<div class="grid grid-cols-2 gap-4 mb-6">
+    <!-- Downloads por versão -->
+    <div class="bg-white rounded-lg border border-gray-200">
+        <div class="px-4 py-3 border-b border-gray-200">
+            <h3 class="text-sm font-semibold text-gray-700">Downloads por versão</h3>
+        </div>
+        <table class="w-full text-sm">
+            <thead class="bg-gray-50 text-xs text-gray-500">
+                <tr>
+                    <th class="px-4 py-2 text-left">Versão</th>
+                    <th class="px-4 py-2 text-left">Downloads</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for row in by_version %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-2 font-medium text-gray-800">v{{ row.version__version }}</td>
+                    <td class="px-4 py-2 text-gray-600">{{ row.total }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="2" class="px-4 py-6 text-center text-gray-400">Sem downloads registados.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Últimos downloads -->
+    <div class="bg-white rounded-lg border border-gray-200">
+        <div class="px-4 py-3 border-b border-gray-200">
+            <h3 class="text-sm font-semibold text-gray-700">Últimos downloads</h3>
+        </div>
+        <table class="w-full text-sm">
+            <thead class="bg-gray-50 text-xs text-gray-500">
+                <tr>
+                    <th class="px-4 py-2 text-left">Utilizador</th>
+                    <th class="px-4 py-2 text-left">Versão</th>
+                    <th class="px-4 py-2 text-left">Data</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for log in recent_logs %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-2 text-gray-700">
+                        {% if log.user %}{{ log.user.username }}{% else %}<span class="text-gray-400">Anónimo</span>{% endif %}
+                    </td>
+                    <td class="px-4 py-2 text-gray-500">
+                        {% if log.version %}v{{ log.version.version }}{% else %}—{% endif %}
+                    </td>
+                    <td class="px-4 py-2 text-gray-400">{{ log.downloaded_at|date:"d/m/Y H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" class="px-4 py-6 text-center text-gray-400">Sem downloads registados.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

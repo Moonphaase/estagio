@@ -22,4 +22,6 @@ urlpatterns = [
     path('users/', views.users, name='users'),
     path('users/<int:id>/edit/', views.user_edit, name='user_edit'),
     path('users/<int:id>/delete/', views.user_delete, name='user_delete'),
+    path('datasets/<int:id>/stats/', views.dataset_stats, name='dataset_stats'),
+    path('datasets/<int:id>/versions/<int:version_id>/download/', views.version_download, name='version_download'),
 ]

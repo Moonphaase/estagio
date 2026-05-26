@@ -131,7 +131,7 @@ class DatasetVersion(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.dataset.name} — v{self.version}"
+        return f"{self.dataset.name} – v{self.version}"
 
 
 class DatasetMetadata(models.Model):
@@ -151,7 +151,7 @@ class DatasetMetadata(models.Model):
         verbose_name = "Metadados do Dataset"
 
     def __str__(self):
-        return f"Metadados — {self.dataset.name}"
+        return f"Metadados – {self.dataset.name}"
 
 
 class Comment(models.Model):
@@ -173,3 +173,33 @@ class Comment(models.Model):
 
     def __str__(self):
         return f"Comentário de {self.author} em {self.dataset.name}"
+
+
+# ─── NOVO: registo de downloads ───────────────────────────────────────────────
+
+class DownloadLog(models.Model):
+    dataset       = models.ForeignKey(
+        Dataset, on_delete=models.CASCADE, related_name="download_logs"
+    )
+    version       = models.ForeignKey(
+        DatasetVersion, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="download_logs"
+    )
+    user          = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="download_logs"
+    )
+    downloaded_at = models.DateTimeField(auto_now_add=True)
+    ip_address    = models.GenericIPAddressField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Log de Download"
+        verbose_name_plural = "Logs de Downloads"
+        ordering = ["-downloaded_at"]
+        indexes = [
+            models.Index(fields=["dataset"]),
+            models.Index(fields=["downloaded_at"]),
+        ]
+
+    def __str__(self):
+        return f"Download de {self.dataset.name} em {self.downloaded_at:%Y-%m-%d %H:%M}"
