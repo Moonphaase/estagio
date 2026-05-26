@@ -1,20 +1,32 @@
-# datasets/views.py — versão completa com logging
 import logging
 import os
 
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.http import FileResponse
+from django.utils import timezone
+from datetime import timedelta
+
 from rest_framework import viewsets, permissions, status, filters
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
-from .models import Dataset, DatasetVersion
+from .models import Dataset, DatasetVersion, DownloadLog
 from .permissions import IsOwnerOrAdmin
-from .serializers import DatasetSerializer, DatasetListSerializer, DatasetVersionSerializer
+from .serializers import (
+    DatasetSerializer, DatasetListSerializer,
+    DatasetVersionSerializer, DatasetStatsSerializer,
+)
 
 logger = logging.getLogger('datasets')
+
+
+def get_client_ip(request):
+    x_forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
+    if x_forwarded:
+        return x_forwarded.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR")
 
 
 class DatasetViewSet(viewsets.ModelViewSet):
@@ -92,10 +104,59 @@ class DatasetViewSet(viewsets.ModelViewSet):
                 {"detail": "Ficheiro não encontrado no servidor."},
                 status=status.HTTP_404_NOT_FOUND,
             )
+        # Registar download
+        DownloadLog.objects.create(
+            dataset=dataset,
+            version=version,
+            user=request.user if request.user.is_authenticated else None,
+            ip_address=get_client_ip(request),
+        )
         logger.info(f'Download latest: "{dataset.name}" v{version.version} por {request.user}')
         response = FileResponse(version.file.open("rb"), as_attachment=True)
         response["Content-Length"] = version.file_size
         return response
+
+    @action(detail=True, methods=["get"], url_path="stats",
+            permission_classes=[permissions.IsAuthenticatedOrReadOnly])
+    def stats(self, request, pk=None):
+        """GET /api/datasets/{id}/stats/"""
+        dataset = self.get_object()
+        now = timezone.now()
+
+        total = DownloadLog.objects.filter(dataset=dataset).count()
+
+        last_7 = DownloadLog.objects.filter(
+            dataset=dataset,
+            downloaded_at__gte=now - timedelta(days=7)
+        ).count()
+
+        last_30 = DownloadLog.objects.filter(
+            dataset=dataset,
+            downloaded_at__gte=now - timedelta(days=30)
+        ).count()
+
+        by_version = (
+            DownloadLog.objects
+            .filter(dataset=dataset, version__isnull=False)
+            .values("version__version")
+            .annotate(total=Count("id"))
+            .order_by("-total")
+        )
+
+        data = {
+            "dataset_id": dataset.id,
+            "dataset_name": dataset.name,
+            "total_downloads": total,
+            "downloads_last_7_days": last_7,
+            "downloads_last_30_days": last_30,
+            "downloads_by_version": [
+                {"version": row["version__version"], "total": row["total"]}
+                for row in by_version
+            ],
+        }
+
+        serializer = DatasetStatsSerializer(data)
+        return Response(serializer.data)
 
 
 class DatasetVersionViewSet(viewsets.ModelViewSet):
@@ -164,6 +225,13 @@ class DatasetVersionViewSet(viewsets.ModelViewSet):
                 {"detail": "Ficheiro não encontrado no servidor."},
                 status=status.HTTP_404_NOT_FOUND,
             )
+        # Registar download
+        DownloadLog.objects.create(
+            dataset=version.dataset,
+            version=version,
+            user=request.user if request.user.is_authenticated else None,
+            ip_address=get_client_ip(request),
+        )
         logger.info(f'Download: v{version.version} do dataset {version.dataset.name} por {request.user}')
         response = FileResponse(version.file.open("rb"), as_attachment=True)
         response["Content-Length"] = version.file_size

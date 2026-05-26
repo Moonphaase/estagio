@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.db.models import Q
 from datasets.models import Dataset, DatasetVersion
 from categories.models import Category
+from datasets.models import Dataset, DatasetVersion, DownloadLog
 
 logger = logging.getLogger('accounts')
 
@@ -433,3 +434,71 @@ def version_delete(request, id, version_id):
         messages.success(request, 'Versão apagada com sucesso.')
 
     return redirect('dataset_versions', dataset.id)
+
+@login_required
+def dataset_stats(request, id):
+    from django.db.models import Count
+    from django.utils import timezone
+    from datetime import timedelta
+    from datasets.models import DownloadLog
+
+    dataset = get_object_or_404(Dataset, id=id)
+
+    if dataset.visibility == 'private' and dataset.owner != request.user and not request.user.is_staff:
+        messages.error(request, 'Não tens permissão para ver este dataset.')
+        return redirect('datasets')
+
+    now = timezone.now()
+
+    total_downloads   = DownloadLog.objects.filter(dataset=dataset).count()
+    downloads_7_days  = DownloadLog.objects.filter(dataset=dataset, downloaded_at__gte=now - timedelta(days=7)).count()
+    downloads_30_days = DownloadLog.objects.filter(dataset=dataset, downloaded_at__gte=now - timedelta(days=30)).count()
+
+    by_version = (
+        DownloadLog.objects
+        .filter(dataset=dataset, version__isnull=False)
+        .values("version__version")
+        .annotate(total=Count("id"))
+        .order_by("-total")
+    )
+
+    recent_logs = (
+        DownloadLog.objects
+        .filter(dataset=dataset)
+        .select_related("user", "version")
+        .order_by("-downloaded_at")[:20]
+    )
+
+    return render(request, 'frontend/dataset_stats.html', {
+        'dataset': dataset,
+        'total_downloads': total_downloads,
+        'downloads_7_days': downloads_7_days,
+        'downloads_30_days': downloads_30_days,
+        'by_version': by_version,
+        'recent_logs': recent_logs,
+    })
+
+@login_required
+def version_download(request, id, version_id):
+    from datasets.models import DownloadLog
+    import os
+    from django.http import FileResponse
+
+    dataset = get_object_or_404(Dataset, id=id)
+    version = get_object_or_404(DatasetVersion, id=version_id, dataset=dataset)
+
+    if not version.file or not os.path.exists(version.file.path):
+        messages.error(request, 'Ficheiro não encontrado.')
+        return redirect('dataset_versions', dataset.id)
+
+    # Registar o download
+    DownloadLog.objects.create(
+        dataset=dataset,
+        version=version,
+        user=request.user,
+        ip_address=request.META.get('REMOTE_ADDR'),
+    )
+
+    response = FileResponse(version.file.open('rb'), as_attachment=True)
+    response['Content-Length'] = version.file_size
+    return response

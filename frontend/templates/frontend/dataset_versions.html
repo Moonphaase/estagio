@@ -54,7 +54,7 @@
                         <td class="px-4 py-3">
                             <div class="flex gap-3">
                                 {% if version.file %}
-                                <a href="/media/{{ version.file.name }}" download class="text-xs text-blue-600 hover:underline">Download</a>
+                                <a href="/datasets/{{ dataset.pk }}/versions/{{ version.pk }}/download/" class="text-xs text-blue-600 hover:underline">Download</a>
                                 {% endif %}
                                 {% if is_owner %}
                                 <form method="post" action="/datasets/{{ dataset.pk }}/versions/{{ version.pk }}/delete/" onsubmit="return confirm('Apagar versão {{ version.version }}?')">

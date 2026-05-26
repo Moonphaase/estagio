@@ -6,6 +6,9 @@
 
 {% block navbar_actions %}
     {% if is_owner %}
+    <a href="/datasets/{{ dataset.id }}/stats/" class="text-xs border border-gray-200 text-gray-600 px-3 py-1.5 rounded hover:bg-gray-50">
+        Estatísticas
+    </a>
     <a href="/datasets/{{ dataset.id }}/edit/" class="text-xs border border-gray-200 text-gray-600 px-3 py-1.5 rounded hover:bg-gray-50">
         Editar
     </a>
@@ -82,7 +85,7 @@
                     <td class="px-4 py-3">
                         <div class="flex gap-3">
                             {% if version.file %}
-                            <a href="/media/{{ version.file.name }}" download class="text-xs text-blue-600 hover:underline">Download</a>
+                            <a href="/datasets/{{ dataset.id }}/versions/{{ version.pk }}/download/" class="text-xs text-blue-600 hover:underline">Download</a>
                             {% endif %}
                             {% if is_owner %}
                             <form method="post" action="/datasets/{{ dataset.id }}/versions/{{ version.pk }}/delete/" onsubmit="return confirm('Apagar versão {{ version.version }}?')">
