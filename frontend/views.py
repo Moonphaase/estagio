@@ -115,6 +115,8 @@ def register_view(request):
 
 @login_required
 def dataset_detail(request, id):
+    import csv
+    import io
     dataset = get_object_or_404(Dataset, id=id)
 
     if dataset.visibility == 'private' and dataset.owner != request.user and not request.user.is_staff:
@@ -123,10 +125,38 @@ def dataset_detail(request, id):
 
     versions = DatasetVersion.objects.filter(dataset=dataset).order_by('-created_at')
     is_owner = dataset.owner == request.user
+
+    # Tags
+    tags = []
+    if hasattr(dataset, 'metadata') and dataset.metadata:
+        tags = dataset.metadata.tags or []
+
+    # Preview CSV da versão mais recente
+    csv_headers = []
+    csv_rows = []
+    latest = versions.filter(is_latest=True).first()
+    if latest and latest.file_type == 'csv':
+        try:
+            with latest.file.open('r') as f:
+                content = f.read()
+                if isinstance(content, bytes):
+                    content = content.decode('utf-8', errors='replace')
+                reader = csv.reader(io.StringIO(content))
+                rows = list(reader)
+                if rows:
+                    csv_headers = rows[0]
+                    csv_rows = rows[1:6]
+        except Exception:
+            pass
+
     return render(request, 'frontend/dataset_detail.html', {
         'dataset': dataset,
         'versions': versions,
         'is_owner': is_owner,
+        'tags': tags,
+        'comments': [],
+        'csv_headers': csv_headers,
+        'csv_rows': csv_rows,
     })
 
 
