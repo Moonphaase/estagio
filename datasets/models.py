@@ -131,7 +131,7 @@ class DatasetVersion(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.dataset.name} – v{self.version}"
+        return f"{self.dataset.name} - v{self.version}"
 
 
 class DatasetMetadata(models.Model):
@@ -151,7 +151,7 @@ class DatasetMetadata(models.Model):
         verbose_name = "Metadados do Dataset"
 
     def __str__(self):
-        return f"Metadados – {self.dataset.name}"
+        return f"Metadados - {self.dataset.name}"
 
 
 class Comment(models.Model):
@@ -175,7 +175,7 @@ class Comment(models.Model):
         return f"Comentário de {self.author} em {self.dataset.name}"
 
 
-# ─── NOVO: registo de downloads ───────────────────────────────────────────────
+# --- Registo de downloads ---
 
 class DownloadLog(models.Model):
     dataset       = models.ForeignKey(
@@ -203,3 +203,43 @@ class DownloadLog(models.Model):
 
     def __str__(self):
         return f"Download de {self.dataset.name} em {self.downloaded_at:%Y-%m-%d %H:%M}"
+
+
+# --- NOVO: Auditoria de alteracoes ---
+
+class AuditLog(models.Model):
+    class Action(models.TextChoices):
+        CREATE = "create", "Criacao"
+        UPDATE = "update", "Edicao"
+        DELETE = "delete", "Eliminacao"
+
+    class Resource(models.TextChoices):
+        DATASET  = "dataset",  "Dataset"
+        VERSION  = "version",  "Versao"
+        CATEGORY = "category", "Categoria"
+        USER     = "user",     "Utilizador"
+
+    user        = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="audit_logs"
+    )
+    action      = models.CharField(max_length=10, choices=Action.choices)
+    resource    = models.CharField(max_length=10, choices=Resource.choices)
+    resource_id = models.PositiveIntegerField(null=True, blank=True)
+    description = models.TextField(blank=True)
+    changes     = models.JSONField(default=dict, blank=True)
+    ip_address  = models.GenericIPAddressField(null=True, blank=True)
+    timestamp   = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Log de Auditoria"
+        verbose_name_plural = "Logs de Auditoria"
+        ordering = ["-timestamp"]
+        indexes = [
+            models.Index(fields=["resource", "resource_id"]),
+            models.Index(fields=["user"]),
+            models.Index(fields=["timestamp"]),
+        ]
+
+    def __str__(self):
+        return f"[{self.timestamp:%Y-%m-%d %H:%M}] {self.user} - {self.get_action_display()} {self.get_resource_display()} #{self.resource_id}"

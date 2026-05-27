@@ -1,13 +1,15 @@
 import logging
+import os
 
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from django.db.models import Q
-from datasets.models import Dataset, DatasetVersion
+from django.http import FileResponse
 from categories.models import Category
-from datasets.models import Dataset, DatasetVersion, DownloadLog
+from datasets.models import Dataset, DatasetVersion, DownloadLog, AuditLog
+from datasets.audit import audit, audit_dataset_changes
 
 logger = logging.getLogger('accounts')
 
@@ -39,10 +41,10 @@ def dashboard(request):
 
 @login_required
 def datasets(request):
-    search           = request.GET.get('search', '').strip()
-    category_filter  = request.GET.get('category', '')
+    search            = request.GET.get('search', '').strip()
+    category_filter   = request.GET.get('category', '')
     visibility_filter = request.GET.get('visibility', '')
-    status_filter    = request.GET.get('status', '')
+    status_filter     = request.GET.get('status', '')
 
     if request.user.is_staff:
         qs = Dataset.objects.all()
@@ -127,12 +129,10 @@ def dataset_detail(request, id):
     versions = DatasetVersion.objects.filter(dataset=dataset).order_by('-created_at')
     is_owner = dataset.owner == request.user
 
-    # Tags
     tags = []
     if hasattr(dataset, 'metadata') and dataset.metadata:
         tags = dataset.metadata.tags or []
 
-    # Preview CSV da versão mais recente
     csv_headers = []
     csv_rows = []
     latest = versions.filter(is_latest=True).first()
@@ -181,6 +181,8 @@ def dataset_create(request):
             name=name, description=description, category=category,
             owner=request.user, visibility=visibility, status=status_val
         )
+        audit(request, "create", "dataset", dataset.id,
+              f"Dataset '{dataset.name}' criado")
         logger.info(f'Dataset criado: "{dataset.name}" por {request.user.email}')
         messages.success(request, 'Dataset criado com sucesso!')
         return redirect('dataset_detail', dataset.id)
@@ -204,6 +206,14 @@ def dataset_edit(request, id):
         return redirect('dataset_detail', dataset.id)
 
     if request.method == 'POST':
+        before = {
+            "name": dataset.name,
+            "description": dataset.description,
+            "visibility": dataset.visibility,
+            "status": dataset.status,
+            "category": str(dataset.category),
+        }
+
         dataset.name        = request.POST.get('name')
         dataset.description = request.POST.get('description')
         category_id         = request.POST.get('category')
@@ -219,6 +229,18 @@ def dataset_edit(request, id):
             dataset.category = None
 
         dataset.save()
+
+        after = {
+            "name": dataset.name,
+            "description": dataset.description,
+            "visibility": dataset.visibility,
+            "status": dataset.status,
+            "category": str(dataset.category),
+        }
+        changes = audit_dataset_changes(before, after)
+        audit(request, "update", "dataset", dataset.id,
+              f"Dataset '{dataset.name}' editado", changes=changes)
+
         logger.info(f'Dataset editado: "{dataset.name}" por {request.user.email}')
         messages.success(request, 'Dataset atualizado com sucesso!')
         return redirect('dataset_detail', dataset.id)
@@ -245,7 +267,7 @@ def dataset_versions(request, id):
 
 
 def logout_view(request):
-    logger.info(f'Logout: {request.user.email if request.user.is_authenticated else "anónimo"}')
+    logger.info(f'Logout: {request.user.email if request.user.is_authenticated else "anonimo"}')
     logout(request)
     return redirect('login')
 
@@ -259,6 +281,8 @@ def dataset_delete(request, id):
         return redirect('dataset_detail', dataset.id)
 
     if request.method == 'POST':
+        audit(request, "delete", "dataset", dataset.id,
+              f"Dataset '{dataset.name}' apagado")
         logger.info(f'Dataset apagado: "{dataset.name}" por {request.user.email}')
         dataset.delete()
     return redirect('datasets')
@@ -285,7 +309,9 @@ def category_create(request):
             })
 
         if name and slug:
-            Category.objects.create(name=name, slug=slug, description=description)
+            cat = Category.objects.create(name=name, slug=slug, description=description)
+            audit(request, "create", "category", cat.id,
+                  f"Categoria '{name}' criada")
             logger.info(f'Categoria criada: "{name}" por {request.user.email}')
             messages.success(request, 'Categoria criada com sucesso!')
             return redirect('categories')
@@ -318,10 +344,12 @@ def version_create(request, id):
             })
 
         DatasetVersion.objects.filter(dataset=dataset, is_latest=True).update(is_latest=False)
-        DatasetVersion.objects.create(
+        v = DatasetVersion.objects.create(
             dataset=dataset, version=version, title=title,
             notes=notes, file=file, created_by=request.user, is_latest=True
         )
+        audit(request, "create", "version", v.id,
+              f"Versão '{version}' criada no dataset '{dataset.name}'")
         logger.info(f'Versão criada: "{dataset.name}" v{version} por {request.user.email}')
         messages.success(request, f'Versão {version} criada com sucesso!')
         return redirect('dataset_versions', dataset.id)
@@ -384,6 +412,12 @@ def user_edit(request, id):
     User = get_user_model()
     edited_user = get_object_or_404(User, id=id)
     if request.method == 'POST':
+        before = {
+            "username": edited_user.username,
+            "email": edited_user.email,
+            "is_staff": edited_user.is_staff,
+            "is_active": edited_user.is_active,
+        }
         edited_user.username   = request.POST.get('username')
         edited_user.email      = request.POST.get('email')
         edited_user.first_name = request.POST.get('first_name')
@@ -391,6 +425,15 @@ def user_edit(request, id):
         edited_user.is_staff   = request.POST.get('is_staff') == 'on'
         edited_user.is_active  = request.POST.get('is_active') == 'on'
         edited_user.save()
+        after = {
+            "username": edited_user.username,
+            "email": edited_user.email,
+            "is_staff": edited_user.is_staff,
+            "is_active": edited_user.is_active,
+        }
+        changes = audit_dataset_changes(before, after)
+        audit(request, "update", "user", edited_user.id,
+              f"Utilizador '{edited_user.username}' editado", changes=changes)
         messages.success(request, 'Utilizador atualizado com sucesso!')
         return redirect('users')
     return render(request, 'frontend/user_edit.html', {'edited_user': edited_user})
@@ -405,6 +448,8 @@ def user_delete(request, id):
     User = get_user_model()
     edited_user = get_object_or_404(User, id=id)
     if request.method == 'POST':
+        audit(request, "delete", "user", edited_user.id,
+              f"Utilizador '{edited_user.username}' apagado")
         edited_user.delete()
         messages.success(request, 'Utilizador apagado com sucesso.')
     return redirect('users')
@@ -412,7 +457,6 @@ def user_delete(request, id):
 
 @login_required
 def version_delete(request, id, version_id):
-    import os
     dataset = get_object_or_404(Dataset, id=id)
     version = get_object_or_404(DatasetVersion, id=version_id, dataset=dataset)
 
@@ -422,6 +466,8 @@ def version_delete(request, id, version_id):
 
     if request.method == 'POST':
         was_latest = version.is_latest
+        audit(request, "delete", "version", version.id,
+              f"Versão '{version.version}' apagada do dataset '{dataset.name}'")
         if version.file and os.path.exists(version.file.path):
             os.remove(version.file.path)
         logger.info(f'Versão apagada: "{dataset.name}" v{version.version} por {request.user.email}')
@@ -435,12 +481,12 @@ def version_delete(request, id, version_id):
 
     return redirect('dataset_versions', dataset.id)
 
+
 @login_required
 def dataset_stats(request, id):
     from django.db.models import Count
     from django.utils import timezone
     from datetime import timedelta
-    from datasets.models import DownloadLog
 
     dataset = get_object_or_404(Dataset, id=id)
 
@@ -478,12 +524,9 @@ def dataset_stats(request, id):
         'recent_logs': recent_logs,
     })
 
+
 @login_required
 def version_download(request, id, version_id):
-    from datasets.models import DownloadLog
-    import os
-    from django.http import FileResponse
-
     dataset = get_object_or_404(Dataset, id=id)
     version = get_object_or_404(DatasetVersion, id=version_id, dataset=dataset)
 
@@ -491,7 +534,6 @@ def version_download(request, id, version_id):
         messages.error(request, 'Ficheiro não encontrado.')
         return redirect('dataset_versions', dataset.id)
 
-    # Registar o download
     DownloadLog.objects.create(
         dataset=dataset,
         version=version,
@@ -502,3 +544,25 @@ def version_download(request, id, version_id):
     response = FileResponse(version.file.open('rb'), as_attachment=True)
     response['Content-Length'] = version.file_size
     return response
+
+
+@login_required
+def auditoria(request):
+    if not request.user.is_staff:
+        messages.error(request, 'Não tens permissão para ver esta página.')
+        return redirect('dashboard')
+
+    logs = AuditLog.objects.select_related("user").all()
+
+    action   = request.GET.get('action', '')
+    resource = request.GET.get('resource', '')
+    user     = request.GET.get('user', '')
+
+    if action:
+        logs = logs.filter(action=action)
+    if resource:
+        logs = logs.filter(resource=resource)
+    if user:
+        logs = logs.filter(user__username__icontains=user)
+
+    return render(request, 'frontend/auditoria.html', {'logs': logs})

@@ -1,0 +1,86 @@
+{% extends "frontend/base.html" %}
+{% block title %}Auditoria{% endblock %}
+{% block page_title %}Auditoria de Alterações{% endblock %}
+
+{% block content %}
+
+<!-- Filtros -->
+<div class="bg-white rounded-lg border border-gray-200 p-4 mb-4">
+    <form method="get" class="flex gap-3 items-end flex-wrap">
+        <div>
+            <label class="text-xs text-gray-500 block mb-1">Ação</label>
+            <select name="action" class="text-sm border border-gray-200 rounded px-2 py-1.5">
+                <option value="">Todas</option>
+                <option value="create" {% if request.GET.action == "create" %}selected{% endif %}>Criação</option>
+                <option value="update" {% if request.GET.action == "update" %}selected{% endif %}>Edição</option>
+                <option value="delete" {% if request.GET.action == "delete" %}selected{% endif %}>Eliminação</option>
+            </select>
+        </div>
+        <div>
+            <label class="text-xs text-gray-500 block mb-1">Recurso</label>
+            <select name="resource" class="text-sm border border-gray-200 rounded px-2 py-1.5">
+                <option value="">Todos</option>
+                <option value="dataset"  {% if request.GET.resource == "dataset"  %}selected{% endif %}>Dataset</option>
+                <option value="version"  {% if request.GET.resource == "version"  %}selected{% endif %}>Versão</option>
+                <option value="category" {% if request.GET.resource == "category" %}selected{% endif %}>Categoria</option>
+                <option value="user"     {% if request.GET.resource == "user"     %}selected{% endif %}>Utilizador</option>
+            </select>
+        </div>
+        <div>
+            <label class="text-xs text-gray-500 block mb-1">Utilizador</label>
+            <input type="text" name="user" value="{{ request.GET.user }}" placeholder="username"
+                   class="text-sm border border-gray-200 rounded px-2 py-1.5">
+        </div>
+        <button type="submit" class="text-sm bg-blue-600 text-white px-4 py-1.5 rounded hover:bg-blue-700">Filtrar</button>
+        <a href="/auditoria/" class="text-sm text-gray-500 hover:underline py-1.5">Limpar</a>
+    </form>
+</div>
+
+<!-- Tabela -->
+<div class="bg-white rounded-lg border border-gray-200">
+    <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-gray-700">Registo de Alterações</h2>
+        <span class="text-xs text-gray-400">{{ logs|length }} entrada(s)</span>
+    </div>
+    <table class="w-full text-sm">
+        <thead class="bg-gray-50 text-xs text-gray-500">
+            <tr>
+                <th class="px-4 py-2 text-left">Data</th>
+                <th class="px-4 py-2 text-left">Utilizador</th>
+                <th class="px-4 py-2 text-left">Ação</th>
+                <th class="px-4 py-2 text-left">Recurso</th>
+                <th class="px-4 py-2 text-left">Descrição</th>
+                <th class="px-4 py-2 text-left">IP</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+            {% for log in logs %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-4 py-2 text-gray-400 whitespace-nowrap">{{ log.timestamp|date:"d/m/Y H:i" }}</td>
+                <td class="px-4 py-2 text-gray-700">{{ log.user|default:"—" }}</td>
+                <td class="px-4 py-2">
+                    {% if log.action == "create" %}
+                        <span class="text-xs px-2 py-0.5 rounded bg-green-100 text-green-700">Criação</span>
+                    {% elif log.action == "update" %}
+                        <span class="text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-700">Edição</span>
+                    {% else %}
+                        <span class="text-xs px-2 py-0.5 rounded bg-red-100 text-red-700">Eliminação</span>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-2">
+                    <span class="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600">
+                        {{ log.get_resource_display }} #{{ log.resource_id }}
+                    </span>
+                </td>
+                <td class="px-4 py-2 text-gray-600">{{ log.description }}</td>
+                <td class="px-4 py-2 text-gray-400 text-xs">{{ log.ip_address|default:"—" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="px-4 py-6 text-center text-gray-400">Sem registos de auditoria.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

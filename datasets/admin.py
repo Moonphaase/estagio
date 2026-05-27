@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Dataset, DatasetVersion, DatasetMetadata, Comment, DownloadLog
+from .models import Dataset, DatasetVersion, DatasetMetadata, Comment, DownloadLog, AuditLog
 
 
 @admin.register(Dataset)
@@ -28,10 +28,24 @@ class CommentAdmin(admin.ModelAdmin):
 
 @admin.register(DownloadLog)
 class DownloadLogAdmin(admin.ModelAdmin):
-    list_display  = ["dataset", "version", "user", "ip_address", "downloaded_at"]
-    list_filter   = ["downloaded_at", "dataset"]
-    search_fields = ["dataset__name", "user__email", "ip_address"]
+    list_display    = ["dataset", "version", "user", "ip_address", "downloaded_at"]
+    list_filter     = ["downloaded_at", "dataset"]
+    search_fields   = ["dataset__name", "user__email", "ip_address"]
     readonly_fields = ["dataset", "version", "user", "ip_address", "downloaded_at"]
 
     def has_add_permission(self, request):
-        return False  # logs não se criam manualmente
+        return False
+
+
+@admin.register(AuditLog)
+class AuditLogAdmin(admin.ModelAdmin):
+    list_display    = ["timestamp", "user", "action", "resource", "resource_id", "description", "ip_address"]
+    list_filter     = ["action", "resource", "timestamp"]
+    search_fields   = ["user__email", "description", "ip_address"]
+    readonly_fields = ["user", "action", "resource", "resource_id", "description", "changes", "ip_address", "timestamp"]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
