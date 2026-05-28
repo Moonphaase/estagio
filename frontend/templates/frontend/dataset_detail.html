@@ -6,6 +6,9 @@
 
 {% block navbar_actions %}
     {% if is_owner %}
+    <a href="/datasets/{{ dataset.id }}/partilhar/" class="text-xs border border-gray-200 text-gray-600 px-3 py-1.5 rounded hover:bg-gray-50">
+        Partilhar
+    </a>
     <a href="/datasets/{{ dataset.id }}/stats/" class="text-xs border border-gray-200 text-gray-600 px-3 py-1.5 rounded hover:bg-gray-50">
         Estatísticas
     </a>
@@ -14,13 +17,13 @@
     </a>
     {% endif %}
     {% if is_owner and dataset.status == 'draft' %}
-<form method="post" action="/datasets/{{ dataset.id }}/submeter/">
-    {% csrf_token %}
-    <button type="submit" class="text-xs bg-yellow-500 text-white px-3 py-1.5 rounded hover:bg-yellow-600">
-        Submeter para Aprovação
-    </button>
-</form>
-{% endif %}
+    <form method="post" action="/datasets/{{ dataset.id }}/submeter/">
+        {% csrf_token %}
+        <button type="submit" class="text-xs bg-yellow-500 text-white px-3 py-1.5 rounded hover:bg-yellow-600">
+            Submeter para Aprovação
+        </button>
+    </form>
+    {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -41,6 +44,7 @@
             <span class="text-xs px-2 py-0.5 rounded
                 {% if dataset.status == 'published' %}bg-blue-100 text-blue-700
                 {% elif dataset.status == 'draft' %}bg-gray-100 text-gray-600
+                {% elif dataset.status == 'pending' %}bg-yellow-100 text-yellow-700
                 {% else %}bg-orange-100 text-orange-700{% endif %}">
                 {{ dataset.get_status_display }}
             </span>

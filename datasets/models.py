@@ -21,7 +21,7 @@ def validate_file_extension(value):
 
 def validate_file_size(value):
     from django.core.exceptions import ValidationError
-    max_size = 500 * 1024 * 1024  # 500 MB
+    max_size = 500 * 1024 * 1024
     if value.size > max_size:
         raise ValidationError("O ficheiro não pode exceder 500 MB.")
 
@@ -38,10 +38,10 @@ class Dataset(models.Model):
         INTERNAL = "internal", "Interno"
 
     class Status(models.TextChoices):
-       DRAFT     = "draft",     "Rascunho"
-    PENDING   = "pending",   "Pendente"
-    PUBLISHED = "published", "Publicado"
-    ARCHIVED  = "archived",  "Arquivado"
+        DRAFT     = "draft",     "Rascunho"
+        PENDING   = "pending",   "Pendente"
+        PUBLISHED = "published", "Publicado"
+        ARCHIVED  = "archived",  "Arquivado"
 
     name        = models.CharField(max_length=255)
     description = models.TextField(blank=True)
@@ -176,8 +176,6 @@ class Comment(models.Model):
         return f"Comentário de {self.author} em {self.dataset.name}"
 
 
-# --- Registo de downloads ---
-
 class DownloadLog(models.Model):
     dataset       = models.ForeignKey(
         Dataset, on_delete=models.CASCADE, related_name="download_logs"
@@ -205,8 +203,6 @@ class DownloadLog(models.Model):
     def __str__(self):
         return f"Download de {self.dataset.name} em {self.downloaded_at:%Y-%m-%d %H:%M}"
 
-
-# --- NOVO: Auditoria de alteracoes ---
 
 class AuditLog(models.Model):
     class Action(models.TextChoices):
@@ -244,3 +240,27 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f"[{self.timestamp:%Y-%m-%d %H:%M}] {self.user} - {self.get_action_display()} {self.get_resource_display()} #{self.resource_id}"
+
+
+class DatasetShare(models.Model):
+    dataset    = models.ForeignKey(
+        Dataset, on_delete=models.CASCADE, related_name="shares"
+    )
+    shared_with = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name="shared_datasets"
+    )
+    shared_by  = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name="dataset_shares_made"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Partilha de Dataset"
+        verbose_name_plural = "Partilhas de Dataset"
+        unique_together = [("dataset", "shared_with")]
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.dataset.name} partilhado com {self.shared_with}"

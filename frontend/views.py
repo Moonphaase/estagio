@@ -618,3 +618,102 @@ def aprovacoes(request):
         return redirect('dashboard')
     pendentes = Dataset.objects.filter(status='pending').order_by('-created_at')
     return render(request, 'frontend/aprovacoes.html', {'pendentes': pendentes})
+@login_required
+def dataset_share(request, id):
+    dataset = get_object_or_404(Dataset, id=id)
+
+    if dataset.owner != request.user and not request.user.is_staff:
+        messages.error(request, 'Não tens permissão para partilhar este dataset.')
+        return redirect('dataset_detail', dataset.id)
+
+    from django.contrib.auth import get_user_model
+    from datasets.models import DatasetShare
+    User = get_user_model()
+
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+        try:
+            user_to_share = User.objects.get(email=email)
+            if user_to_share == dataset.owner:
+                messages.error(request, 'Não podes partilhar o dataset contigo próprio.')
+            elif DatasetShare.objects.filter(dataset=dataset, shared_with=user_to_share).exists():
+                messages.error(request, f'O dataset já está partilhado com {email}.')
+            else:
+                DatasetShare.objects.create(
+                    dataset=dataset,
+                    shared_with=user_to_share,
+                    shared_by=request.user
+                )
+                messages.success(request, f'Dataset partilhado com {email}.')
+        except User.DoesNotExist:
+            messages.error(request, f'Não existe nenhum utilizador com o email {email}.')
+
+    shares = DatasetShare.objects.filter(dataset=dataset).select_related('shared_with')
+    return render(request, 'frontend/dataset_share.html', {
+        'dataset': dataset,
+        'shares': shares,
+    })
+
+
+@login_required
+def dataset_share_remove(request, id, share_id):
+    from datasets.models import DatasetShare
+    dataset = get_object_or_404(Dataset, id=id)
+
+    if dataset.owner != request.user and not request.user.is_staff:
+        messages.error(request, 'Não tens permissão.')
+        return redirect('dataset_detail', dataset.id)
+
+    if request.method == 'POST':
+        share = get_object_or_404(DatasetShare, id=share_id, dataset=dataset)
+        share.delete()
+        messages.success(request, 'Partilha removida.')
+
+    return redirect('dataset_share', dataset.id)
+
+@login_required
+def dataset_detail(request, id):
+    import csv
+    import io
+    from datasets.models import DatasetShare
+    dataset = get_object_or_404(Dataset, id=id)
+
+    # Verificar acesso
+    has_share = DatasetShare.objects.filter(dataset=dataset, shared_with=request.user).exists()
+    if dataset.visibility == 'private' and dataset.owner != request.user and not request.user.is_staff and not has_share:
+        messages.error(request, 'Não tens permissão para ver este dataset.')
+        return redirect('datasets')
+
+    versions = DatasetVersion.objects.filter(dataset=dataset).order_by('-created_at')
+    is_owner = dataset.owner == request.user
+
+    tags = []
+    if hasattr(dataset, 'metadata') and dataset.metadata:
+        tags = dataset.metadata.tags or []
+
+    csv_headers = []
+    csv_rows = []
+    latest = versions.filter(is_latest=True).first()
+    if latest and latest.file_type == 'csv':
+        try:
+            with latest.file.open('r') as f:
+                content = f.read()
+                if isinstance(content, bytes):
+                    content = content.decode('utf-8', errors='replace')
+                reader = csv.reader(io.StringIO(content))
+                rows = list(reader)
+                if rows:
+                    csv_headers = rows[0]
+                    csv_rows = rows[1:6]
+        except Exception:
+            pass
+
+    return render(request, 'frontend/dataset_detail.html', {
+        'dataset': dataset,
+        'versions': versions,
+        'is_owner': is_owner,
+        'tags': tags,
+        'comments': [],
+        'csv_headers': csv_headers,
+        'csv_rows': csv_rows,
+    })

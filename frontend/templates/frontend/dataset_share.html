@@ -1,0 +1,74 @@
+{% extends "frontend/base.html" %}
+
+{% block title %}Partilhar Dataset{% endblock %}
+{% block page_title %}Partilhar — {{ dataset.name }}{% endblock %}
+{% block nav_datasets %}bg-gray-100 font-medium text-gray-900{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="mb-4 px-4 py-3 rounded text-sm {% if message.tags == 'error' %}bg-red-50 text-red-700 border border-red-200{% else %}bg-green-50 text-green-700 border border-green-200{% endif %}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="max-w-lg space-y-4">
+
+    <!-- Formulário para adicionar partilha -->
+    <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <h2 class="text-sm font-semibold text-gray-700 mb-4">Partilhar com utilizador</h2>
+        <form method="post">
+            {% csrf_token %}
+            <div class="flex gap-2">
+                <input type="email" name="email" placeholder="Email do utilizador"
+                    class="flex-1 text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400" required>
+                <button type="submit" class="bg-blue-600 text-white text-sm px-4 py-2 rounded hover:bg-blue-700">
+                    Partilhar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Lista de partilhas actuais -->
+    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-gray-700">Partilhado com</h2>
+            <span class="text-xs text-gray-400">{{ shares|length }} utilizador(es)</span>
+        </div>
+        <table class="w-full text-sm">
+            <thead class="bg-gray-50 text-xs text-gray-500">
+                <tr>
+                    <th class="px-4 py-2 text-left">Utilizador</th>
+                    <th class="px-4 py-2 text-left">Email</th>
+                    <th class="px-4 py-2 text-left">Partilhado em</th>
+                    <th class="px-4 py-2 text-left"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for share in shares %}
+                <tr>
+                    <td class="px-4 py-3 text-gray-700">{{ share.shared_with.username }}</td>
+                    <td class="px-4 py-3 text-gray-500">{{ share.shared_with.email }}</td>
+                    <td class="px-4 py-3 text-gray-400">{{ share.created_at|date:"d/m/Y" }}</td>
+                    <td class="px-4 py-3">
+                        <form method="post" action="/datasets/{{ dataset.id }}/partilhar/{{ share.id }}/remover/" onsubmit="return confirm('Remover partilha?')">
+                            {% csrf_token %}
+                            <button type="submit" class="text-xs text-red-500 hover:underline">Remover</button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="px-4 py-6 text-center text-gray-400">Ainda não partilhado com ninguém.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <a href="/datasets/{{ dataset.id }}/" class="block text-sm text-gray-500 hover:underline">← Voltar ao dataset</a>
+</div>
+
+{% endblock %}

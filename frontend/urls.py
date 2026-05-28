@@ -27,6 +27,8 @@ urlpatterns = [
     path('aprovacoes/', views.aprovacoes, name='aprovacoes'),
     path('datasets/<int:id>/submeter/', views.dataset_submit, name='dataset_submit'),
     path('datasets/<int:id>/aprovar/', views.dataset_approve, name='dataset_approve'),
+    path('datasets/<int:id>/partilhar/', views.dataset_share, name='dataset_share'),
+    path('datasets/<int:id>/partilhar/<int:share_id>/remover/', views.dataset_share_remove, name='dataset_share_remove'),
     path('datasets/<int:id>/rejeitar/', views.dataset_reject, name='dataset_reject'),
     path('datasets/<int:id>/versions/<int:version_id>/download/', views.version_download, name='version_download'),
 ]
