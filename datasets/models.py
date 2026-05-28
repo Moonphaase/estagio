@@ -38,9 +38,10 @@ class Dataset(models.Model):
         INTERNAL = "internal", "Interno"
 
     class Status(models.TextChoices):
-        DRAFT     = "draft",     "Rascunho"
-        PUBLISHED = "published", "Publicado"
-        ARCHIVED  = "archived",  "Arquivado"
+       DRAFT     = "draft",     "Rascunho"
+    PENDING   = "pending",   "Pendente"
+    PUBLISHED = "published", "Publicado"
+    ARCHIVED  = "archived",  "Arquivado"
 
     name        = models.CharField(max_length=255)
     description = models.TextField(blank=True)

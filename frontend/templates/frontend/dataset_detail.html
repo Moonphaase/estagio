@@ -13,6 +13,14 @@
         Editar
     </a>
     {% endif %}
+    {% if is_owner and dataset.status == 'draft' %}
+<form method="post" action="/datasets/{{ dataset.id }}/submeter/">
+    {% csrf_token %}
+    <button type="submit" class="text-xs bg-yellow-500 text-white px-3 py-1.5 rounded hover:bg-yellow-600">
+        Submeter para Aprovação
+    </button>
+</form>
+{% endif %}
 {% endblock %}
 
 {% block content %}

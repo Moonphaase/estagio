@@ -236,3 +236,4 @@ class DatasetVersionViewSet(viewsets.ModelViewSet):
         response = FileResponse(version.file.open("rb"), as_attachment=True)
         response["Content-Length"] = version.file_size
         return response
+    

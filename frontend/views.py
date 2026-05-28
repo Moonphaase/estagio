@@ -566,3 +566,55 @@ def auditoria(request):
         logs = logs.filter(user__username__icontains=user)
 
     return render(request, 'frontend/auditoria.html', {'logs': logs})
+@login_required
+def dataset_submit(request, id):
+    dataset = get_object_or_404(Dataset, id=id)
+    if dataset.owner != request.user:
+        messages.error(request, 'Não tens permissão.')
+        return redirect('dataset_detail', dataset.id)
+    if dataset.status != 'draft':
+        messages.error(request, 'Só podes submeter datasets em rascunho.')
+        return redirect('dataset_detail', dataset.id)
+    if request.method == 'POST':
+        dataset.status = 'pending'
+        dataset.save()
+        messages.success(request, 'Dataset submetido para aprovação.')
+    return redirect('dataset_detail', dataset.id)
+
+
+@login_required
+def dataset_approve(request, id):
+    if not request.user.is_staff:
+        messages.error(request, 'Não tens permissão.')
+        return redirect('dashboard')
+    dataset = get_object_or_404(Dataset, id=id)
+    if request.method == 'POST':
+        dataset.status = 'published'
+        dataset.save()
+        logger.info(f'Dataset aprovado: "{dataset.name}" por {request.user.email}')
+        messages.success(request, f'Dataset "{dataset.name}" aprovado e publicado.')
+    return redirect('aprovacoes')
+
+
+@login_required
+def dataset_reject(request, id):
+    if not request.user.is_staff:
+        messages.error(request, 'Não tens permissão.')
+        return redirect('dashboard')
+    dataset = get_object_or_404(Dataset, id=id)
+    if request.method == 'POST':
+        motivo = request.POST.get('motivo', '')
+        dataset.status = 'draft'
+        dataset.save()
+        logger.info(f'Dataset rejeitado: "{dataset.name}" por {request.user.email}. Motivo: {motivo}')
+        messages.warning(request, f'Dataset "{dataset.name}" rejeitado.')
+    return redirect('aprovacoes')
+
+
+@login_required
+def aprovacoes(request):
+    if not request.user.is_staff:
+        messages.error(request, 'Não tens permissão.')
+        return redirect('dashboard')
+    pendentes = Dataset.objects.filter(status='pending').order_by('-created_at')
+    return render(request, 'frontend/aprovacoes.html', {'pendentes': pendentes})

@@ -1,0 +1,64 @@
+{% extends "frontend/base.html" %}
+
+{% block title %}Aprovações{% endblock %}
+{% block page_title %}Aprovações Pendentes{% endblock %}
+{% block nav_aprovacoes %}bg-gray-100 font-medium text-gray-900{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="mb-4 px-4 py-3 rounded text-sm {% if message.tags == 'error' %}bg-red-50 text-red-700 border border-red-200{% elif message.tags == 'warning' %}bg-yellow-50 text-yellow-700 border border-yellow-200{% else %}bg-green-50 text-green-700 border border-green-200{% endif %}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-gray-700">Datasets pendentes de aprovação</h2>
+        <span class="text-xs text-gray-400">{{ pendentes|length }} pendente(s)</span>
+    </div>
+    <table class="w-full text-sm">
+        <thead class="bg-gray-50 text-xs text-gray-500">
+            <tr>
+                <th class="px-4 py-2 text-left">Nome</th>
+                <th class="px-4 py-2 text-left">Dono</th>
+                <th class="px-4 py-2 text-left">Categoria</th>
+                <th class="px-4 py-2 text-left">Submetido em</th>
+                <th class="px-4 py-2 text-left"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+            {% for dataset in pendentes %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3 font-medium text-gray-800">
+                    <a href="/datasets/{{ dataset.id }}/" class="hover:underline text-blue-600">{{ dataset.name }}</a>
+                </td>
+                <td class="px-4 py-3 text-gray-500">{{ dataset.owner }}</td>
+                <td class="px-4 py-3 text-gray-500">{{ dataset.category|default:"—" }}</td>
+                <td class="px-4 py-3 text-gray-400">{{ dataset.updated_at|date:"d/m/Y H:i" }}</td>
+                <td class="px-4 py-3">
+                    <div class="flex gap-2">
+                        <form method="post" action="/datasets/{{ dataset.id }}/aprovar/">
+                            {% csrf_token %}
+                            <button type="submit" class="text-xs bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">Aprovar</button>
+                        </form>
+                        <form method="post" action="/datasets/{{ dataset.id }}/rejeitar/" onsubmit="return confirm('Tens a certeza que queres rejeitar?')">
+                            {% csrf_token %}
+                            <input type="hidden" name="motivo" value="Rejeitado pelo admin">
+                            <button type="submit" class="text-xs bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">Rejeitar</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="px-4 py-6 text-center text-gray-400">Não há datasets pendentes de aprovação.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}
