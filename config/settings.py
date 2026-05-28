@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'categories',
     'datasets',
     'frontend',
+    'api_keys',
 ]
 
 MIDDLEWARE = [
@@ -90,6 +91,7 @@ LOGOUT_REDIRECT_URL = 'login'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
+        'api_keys.authentication.APIKeyAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ),

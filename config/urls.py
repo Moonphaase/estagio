@@ -23,4 +23,5 @@ urlpatterns = [
     path("api/",      include(datasets_router.urls)),
     path("api-auth/", include("rest_framework.urls")),
     path("",          include("frontend.urls")),
+    path('api/auth/api-keys/', include('api_keys.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
