@@ -8,7 +8,7 @@ from django.contrib import messages
 from django.db.models import Q
 from django.http import FileResponse
 from categories.models import Category
-from datasets.models import Dataset, DatasetVersion, DownloadLog, AuditLog
+from datasets.models import Dataset, DatasetVersion, DownloadLog, AuditLog, Comment
 from datasets.audit import audit, audit_dataset_changes
 
 logger = logging.getLogger('accounts')
@@ -120,14 +120,17 @@ def register_view(request):
 def dataset_detail(request, id):
     import csv
     import io
+    from datasets.models import DatasetShare
     dataset = get_object_or_404(Dataset, id=id)
 
-    if dataset.visibility == 'private' and dataset.owner != request.user and not request.user.is_staff:
+    has_share = DatasetShare.objects.filter(dataset=dataset, shared_with=request.user).exists()
+    if dataset.visibility == 'private' and dataset.owner != request.user and not request.user.is_staff and not has_share:
         messages.error(request, 'Não tens permissão para ver este dataset.')
         return redirect('datasets')
 
     versions = DatasetVersion.objects.filter(dataset=dataset).order_by('-created_at')
     is_owner = dataset.owner == request.user
+    comments = Comment.objects.filter(dataset=dataset).select_related('author').order_by('created_at')
 
     tags = []
     if hasattr(dataset, 'metadata') and dataset.metadata:
@@ -155,7 +158,7 @@ def dataset_detail(request, id):
         'versions': versions,
         'is_owner': is_owner,
         'tags': tags,
-        'comments': [],
+        'comments': comments,
         'csv_headers': csv_headers,
         'csv_rows': csv_rows,
     })
@@ -169,6 +172,10 @@ def dataset_create(request):
         category_id = request.POST.get('category')
         visibility  = request.POST.get('visibility', 'public')
         status_val  = request.POST.get('status', 'draft')
+
+        # Utilizadores normais só podem criar em rascunho
+        if not request.user.is_staff and status_val in ('published', 'archived'):
+            status_val = 'draft'
 
         category = None
         if category_id:
@@ -495,7 +502,6 @@ def dataset_stats(request, id):
         return redirect('datasets')
 
     now = timezone.now()
-
     total_downloads   = DownloadLog.objects.filter(dataset=dataset).count()
     downloads_7_days  = DownloadLog.objects.filter(dataset=dataset, downloaded_at__gte=now - timedelta(days=7)).count()
     downloads_30_days = DownloadLog.objects.filter(dataset=dataset, downloaded_at__gte=now - timedelta(days=30)).count()
@@ -566,6 +572,8 @@ def auditoria(request):
         logs = logs.filter(user__username__icontains=user)
 
     return render(request, 'frontend/auditoria.html', {'logs': logs})
+
+
 @login_required
 def dataset_submit(request, id):
     dataset = get_object_or_404(Dataset, id=id)
@@ -618,6 +626,8 @@ def aprovacoes(request):
         return redirect('dashboard')
     pendentes = Dataset.objects.filter(status='pending').order_by('-created_at')
     return render(request, 'frontend/aprovacoes.html', {'pendentes': pendentes})
+
+
 @login_required
 def dataset_share(request, id):
     dataset = get_object_or_404(Dataset, id=id)
@@ -671,49 +681,41 @@ def dataset_share_remove(request, id, share_id):
 
     return redirect('dataset_share', dataset.id)
 
+
 @login_required
-def dataset_detail(request, id):
-    import csv
-    import io
-    from datasets.models import DatasetShare
+def comment_create(request, id):
     dataset = get_object_or_404(Dataset, id=id)
 
-    # Verificar acesso
-    has_share = DatasetShare.objects.filter(dataset=dataset, shared_with=request.user).exists()
-    if dataset.visibility == 'private' and dataset.owner != request.user and not request.user.is_staff and not has_share:
-        messages.error(request, 'Não tens permissão para ver este dataset.')
+    if dataset.visibility == 'private' and dataset.owner != request.user and not request.user.is_staff:
+        messages.error(request, 'Não tens permissão para comentar neste dataset.')
         return redirect('datasets')
 
-    versions = DatasetVersion.objects.filter(dataset=dataset).order_by('-created_at')
-    is_owner = dataset.owner == request.user
+    if request.method == 'POST':
+        content = request.POST.get('content', '').strip()
+        if content:
+            Comment.objects.create(
+                dataset=dataset,
+                author=request.user,
+                content=content,
+            )
+            messages.success(request, 'Comentário adicionado.')
+        else:
+            messages.error(request, 'O comentário não pode estar vazio.')
 
-    tags = []
-    if hasattr(dataset, 'metadata') and dataset.metadata:
-        tags = dataset.metadata.tags or []
+    return redirect('dataset_detail', dataset.id)
 
-    csv_headers = []
-    csv_rows = []
-    latest = versions.filter(is_latest=True).first()
-    if latest and latest.file_type == 'csv':
-        try:
-            with latest.file.open('r') as f:
-                content = f.read()
-                if isinstance(content, bytes):
-                    content = content.decode('utf-8', errors='replace')
-                reader = csv.reader(io.StringIO(content))
-                rows = list(reader)
-                if rows:
-                    csv_headers = rows[0]
-                    csv_rows = rows[1:6]
-        except Exception:
-            pass
 
-    return render(request, 'frontend/dataset_detail.html', {
-        'dataset': dataset,
-        'versions': versions,
-        'is_owner': is_owner,
-        'tags': tags,
-        'comments': [],
-        'csv_headers': csv_headers,
-        'csv_rows': csv_rows,
-    })
+@login_required
+def comment_delete(request, id, comment_id):
+    dataset = get_object_or_404(Dataset, id=id)
+    comment = get_object_or_404(Comment, id=comment_id, dataset=dataset)
+
+    if comment.author != request.user and not request.user.is_staff:
+        messages.error(request, 'Não tens permissão para apagar este comentário.')
+        return redirect('dataset_detail', dataset.id)
+
+    if request.method == 'POST':
+        comment.delete()
+        messages.success(request, 'Comentário apagado.')
+
+    return redirect('dataset_detail', dataset.id)

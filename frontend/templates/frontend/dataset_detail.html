@@ -147,4 +147,48 @@
 </div>
 {% endif %}
 
+<!-- COMENTÁRIOS -->
+<div class="bg-white rounded-lg border border-gray-200 mb-4">
+    <div class="px-4 py-3 border-b border-gray-200">
+        <h2 class="text-sm font-semibold text-gray-700">Comentários ({{ comments|length }})</h2>
+    </div>
+
+    <!-- Lista de comentários -->
+    <div class="divide-y divide-gray-100">
+        {% for comment in comments %}
+        <div class="px-4 py-3">
+            <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-medium text-gray-700">{{ comment.author.username }}</span>
+                <div class="flex items-center gap-3">
+                    <span class="text-xs text-gray-400">{{ comment.created_at|date:"d/m/Y H:i" }}</span>
+                    {% if comment.author == request.user or request.user.is_staff %}
+                    <form method="post" action="/datasets/{{ dataset.id }}/comentarios/{{ comment.id }}/apagar/" onsubmit="return confirm('Apagar comentário?')">
+                        {% csrf_token %}
+                        <button type="submit" class="text-xs text-red-400 hover:text-red-600">Apagar</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            <p class="text-sm text-gray-600">{{ comment.content }}</p>
+        </div>
+        {% empty %}
+        <div class="px-4 py-6 text-center text-gray-400 text-sm">Ainda não há comentários.</div>
+        {% endfor %}
+    </div>
+
+    <!-- Formulário para novo comentário -->
+    <div class="px-4 py-3 border-t border-gray-100 bg-gray-50">
+        <form method="post" action="/datasets/{{ dataset.id }}/comentarios/">
+            {% csrf_token %}
+            <textarea name="content" rows="2" placeholder="Escreve um comentário..."
+                class="w-full text-sm border border-gray-200 rounded px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400"></textarea>
+            <div class="flex justify-end mt-2">
+                <button type="submit" class="text-xs bg-blue-600 text-white px-4 py-1.5 rounded hover:bg-blue-700">
+                    Comentar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {% endblock %}
