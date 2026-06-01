@@ -11,12 +11,14 @@ from rest_framework import viewsets, permissions, status, filters
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 
-from .models import Dataset, DatasetVersion, DownloadLog
+from .models import Dataset, DatasetVersion, DownloadLog, DatasetFavorite  # ← DatasetFavorite
 from .permissions import IsOwnerOrAdmin
 from .serializers import (
     DatasetSerializer, DatasetListSerializer,
     DatasetVersionSerializer, DatasetStatsSerializer,
+    DatasetFavoriteSerializer,  # ← novo
 )
 
 logger = logging.getLogger('datasets')
@@ -29,7 +31,7 @@ def get_client_ip(request):
     return request.META.get("REMOTE_ADDR")
 
 
-class DatasetViewSet(viewsets.ModelViewSet):
+class DatasetViewSet(viewsets.ModelViewSet):  # ← só UMA definição
     queryset = Dataset.objects.select_related("owner", "category", "metadata")
     filter_backends  = [filters.SearchFilter, filters.OrderingFilter]
     search_fields    = ["name", "description", "category__name"]
@@ -89,25 +91,40 @@ class DatasetViewSet(viewsets.ModelViewSet):
         logger.info(f'Dataset apagado: "{instance.name}" por {request.user.email}')
         return super().destroy(request, *args, **kwargs)
 
+    # ── FAVORITOS ────────────────────────────────────────────────────────────
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def favorite(self, request, pk=None):
+        dataset = self.get_object()
+        favorite, created = DatasetFavorite.objects.get_or_create(
+            user=request.user,
+            dataset=dataset
+        )
+        if not created:
+            favorite.delete()
+            return Response({'status': 'removed', 'is_favorited': False})
+        return Response({'status': 'added', 'is_favorited': True}, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def my_favorites(self, request):
+        favorites = DatasetFavorite.objects.filter(
+            user=request.user
+        ).select_related('dataset')
+        serializer = DatasetFavoriteSerializer(favorites, many=True)
+        return Response(serializer.data)
+
+    # ── DOWNLOADS ────────────────────────────────────────────────────────────
+
     @action(detail=True, methods=["get"], url_path="latest/download")
     def latest_download(self, request, pk=None):
-        """GET /api/datasets/{id}/latest/download/"""
         dataset = self.get_object()
         version = dataset.versions.filter(is_latest=True).first()
         if not version:
-            return Response(
-                {"detail": "Este dataset não tem versões."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return Response({"detail": "Este dataset não tem versões."}, status=status.HTTP_404_NOT_FOUND)
         if not version.file or not os.path.exists(version.file.path):
-            return Response(
-                {"detail": "Ficheiro não encontrado no servidor."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-        # Registar download
+            return Response({"detail": "Ficheiro não encontrado no servidor."}, status=status.HTTP_404_NOT_FOUND)
         DownloadLog.objects.create(
-            dataset=dataset,
-            version=version,
+            dataset=dataset, version=version,
             user=request.user if request.user.is_authenticated else None,
             ip_address=get_client_ip(request),
         )
@@ -119,22 +136,11 @@ class DatasetViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get"], url_path="stats",
             permission_classes=[permissions.IsAuthenticatedOrReadOnly])
     def stats(self, request, pk=None):
-        """GET /api/datasets/{id}/stats/"""
         dataset = self.get_object()
         now = timezone.now()
-
-        total = DownloadLog.objects.filter(dataset=dataset).count()
-
-        last_7 = DownloadLog.objects.filter(
-            dataset=dataset,
-            downloaded_at__gte=now - timedelta(days=7)
-        ).count()
-
-        last_30 = DownloadLog.objects.filter(
-            dataset=dataset,
-            downloaded_at__gte=now - timedelta(days=30)
-        ).count()
-
+        total  = DownloadLog.objects.filter(dataset=dataset).count()
+        last_7 = DownloadLog.objects.filter(dataset=dataset, downloaded_at__gte=now - timedelta(days=7)).count()
+        last_30 = DownloadLog.objects.filter(dataset=dataset, downloaded_at__gte=now - timedelta(days=30)).count()
         by_version = (
             DownloadLog.objects
             .filter(dataset=dataset, version__isnull=False)
@@ -142,7 +148,6 @@ class DatasetViewSet(viewsets.ModelViewSet):
             .annotate(total=Count("id"))
             .order_by("-total")
         )
-
         data = {
             "dataset_id": dataset.id,
             "dataset_name": dataset.name,
@@ -154,7 +159,6 @@ class DatasetViewSet(viewsets.ModelViewSet):
                 for row in by_version
             ],
         }
-
         serializer = DatasetStatsSerializer(data)
         return Response(serializer.data)
 
@@ -173,18 +177,13 @@ class DatasetVersionViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         dataset = self.get_dataset()
-
         if dataset.owner != self.request.user and not self.request.user.is_staff:
             raise PermissionDenied("Apenas o dono ou um admin pode criar versões.")
-
         version_number = serializer.validated_data.get("version")
-
         with transaction.atomic():
             if dataset.versions.filter(version=version_number).exists():
                 raise PermissionDenied(f"A versão '{version_number}' já existe neste dataset.")
-
             dataset.versions.filter(is_latest=True).update(is_latest=False)
-
             version = serializer.save(
                 dataset=dataset,
                 created_by=self.request.user,
@@ -195,40 +194,27 @@ class DatasetVersionViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         dataset  = self.get_dataset()
-
         if dataset.owner != request.user and not request.user.is_staff:
             raise PermissionDenied("Apenas o dono ou um admin pode apagar versões.")
-
         was_latest = instance.is_latest
         logger.info(f'Versão apagada: "{dataset.name}" v{instance.version} por {request.user.email}')
         instance.delete()
-
         if was_latest:
             next_latest = dataset.versions.order_by("-created_at").first()
             if next_latest:
                 next_latest.is_latest = True
                 next_latest.save(update_fields=["is_latest"])
-
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=["get"])
     def download(self, request, dataset_pk=None, pk=None):
-        """GET /api/datasets/{dataset_pk}/versions/{id}/download/"""
         version = self.get_object()
         if not version.file:
-            return Response(
-                {"detail": "Ficheiro não disponível."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return Response({"detail": "Ficheiro não disponível."}, status=status.HTTP_404_NOT_FOUND)
         if not os.path.exists(version.file.path):
-            return Response(
-                {"detail": "Ficheiro não encontrado no servidor."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-        # Registar download
+            return Response({"detail": "Ficheiro não encontrado no servidor."}, status=status.HTTP_404_NOT_FOUND)
         DownloadLog.objects.create(
-            dataset=version.dataset,
-            version=version,
+            dataset=version.dataset, version=version,
             user=request.user if request.user.is_authenticated else None,
             ip_address=get_client_ip(request),
         )
@@ -236,4 +222,3 @@ class DatasetVersionViewSet(viewsets.ModelViewSet):
         response = FileResponse(version.file.open("rb"), as_attachment=True)
         response["Content-Length"] = version.file_size
         return response
-    

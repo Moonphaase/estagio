@@ -6,15 +6,9 @@
 
 {% block navbar_actions %}
     {% if is_owner %}
-    <a href="/datasets/{{ dataset.id }}/partilhar/" class="text-xs border border-gray-200 text-gray-600 px-3 py-1.5 rounded hover:bg-gray-50">
-        Partilhar
-    </a>
-    <a href="/datasets/{{ dataset.id }}/stats/" class="text-xs border border-gray-200 text-gray-600 px-3 py-1.5 rounded hover:bg-gray-50">
-        Estatísticas
-    </a>
-    <a href="/datasets/{{ dataset.id }}/edit/" class="text-xs border border-gray-200 text-gray-600 px-3 py-1.5 rounded hover:bg-gray-50">
-        Editar
-    </a>
+    <a href="/datasets/{{ dataset.id }}/partilhar/" class="text-xs border border-gray-200 text-gray-600 px-3 py-1.5 rounded hover:bg-gray-50">Partilhar</a>
+    <a href="/datasets/{{ dataset.id }}/stats/" class="text-xs border border-gray-200 text-gray-600 px-3 py-1.5 rounded hover:bg-gray-50">Estatísticas</a>
+    <a href="/datasets/{{ dataset.id }}/edit/" class="text-xs border border-gray-200 text-gray-600 px-3 py-1.5 rounded hover:bg-gray-50">Editar</a>
     {% endif %}
     {% if is_owner and dataset.status == 'draft' %}
     <form method="post" action="/datasets/{{ dataset.id }}/submeter/">
@@ -34,7 +28,34 @@
             <h2 class="font-semibold text-gray-800 mb-1">{{ dataset.name|default:"Nome do Dataset" }}</h2>
             <p class="text-sm text-gray-500">{{ dataset.description|default:"Sem descrição." }}</p>
         </div>
-        <div class="flex gap-2">
+        <div class="flex items-center gap-2">
+
+           {% if user.is_authenticated %}
+<button
+    x-data="{ favorited: {{ is_favorited|yesno:'true,false' }} }"
+    @click="
+        fetch('/datasets/{{ dataset.id }}/favorite/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            credentials: 'include'
+        })
+        .then(r => r.json())
+        .then(data => { favorited = data.is_favorited })
+        .catch(e => console.error('Erro:', e))
+    "
+    :class="favorited ? 'text-red-500 border-red-200' : 'text-gray-400 border-gray-200'"
+    class="flex items-center gap-1 text-xs border px-3 py-1.5 rounded hover:text-red-500 hover:border-red-200 transition-colors"
+>
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" />
+    </svg>
+    <span x-text="favorited ? 'Guardado' : 'Guardar'"></span>
+</button>
+{% endif %}
+
             <span class="text-xs px-2 py-0.5 rounded
                 {% if dataset.visibility == 'public' %}bg-green-100 text-green-700
                 {% elif dataset.visibility == 'private' %}bg-red-100 text-red-700

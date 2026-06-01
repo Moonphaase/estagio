@@ -264,3 +264,23 @@ class DatasetShare(models.Model):
 
     def __str__(self):
         return f"{self.dataset.name} partilhado com {self.shared_with}"
+
+
+class DatasetFavorite(models.Model):  # ← fora do DatasetShare, sem indentação
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='favorites'
+    )
+    dataset = models.ForeignKey(
+        Dataset,
+        on_delete=models.CASCADE,
+        related_name='favorited_by'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [("user", "dataset")]
+
+    def __str__(self):
+        return f"{self.user} ♥ {self.dataset.name}"  # ← .name, não .title

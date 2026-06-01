@@ -8,7 +8,6 @@
 </head>
 <body class="bg-gray-100 min-h-screen flex">
 
-    <!-- Sidebar -->
     <aside class="w-56 min-h-screen bg-white border-r border-gray-200 flex flex-col fixed top-0 left-0">
         <div class="px-5 py-4 border-b border-gray-200">
             <span class="font-semibold text-gray-800">Dataset Manager</span>
@@ -30,7 +29,6 @@
         </div>
     </aside>
 
-    <!-- Conteúdo -->
     <div class="flex-1 flex flex-col ml-56">
         <header class="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6">
             <h1 class="text-sm font-semibold text-gray-800">{% block page_title %}{% endblock %}</h1>
@@ -43,5 +41,6 @@
         </main>
     </div>
 
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </body>
 </html>

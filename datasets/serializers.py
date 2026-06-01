@@ -1,7 +1,7 @@
 import re
 
 from rest_framework import serializers
-from .models import Dataset, DatasetVersion, DatasetMetadata
+from .models import Dataset, DatasetVersion, DatasetMetadata, DatasetFavorite
 
 
 class DatasetMetadataSerializer(serializers.ModelSerializer):
@@ -48,6 +48,7 @@ class DatasetSerializer(serializers.ModelSerializer):
     versions       = DatasetVersionSerializer(many=True, read_only=True)
     version_count  = serializers.SerializerMethodField()
     latest_version = serializers.SerializerMethodField()
+    is_favorited   = serializers.SerializerMethodField()  # ← NOVO
 
     class Meta:
         model  = Dataset
@@ -55,6 +56,7 @@ class DatasetSerializer(serializers.ModelSerializer):
             "id", "name", "slug", "description", "category",
             "owner", "visibility", "status", "metadata",
             "versions", "version_count", "latest_version",
+            "is_favorited",  # ← NOVO
             "created_at", "updated_at",
         ]
         read_only_fields = ["id", "slug", "owner", "created_at", "updated_at"]
@@ -68,12 +70,19 @@ class DatasetSerializer(serializers.ModelSerializer):
             return {"id": latest.id, "version": latest.version}
         return None
 
+    def get_is_favorited(self, obj):  # ← NOVO
+        request = self.context.get("request")
+        if request and request.user.is_authenticated:
+            return obj.favorited_by.filter(user=request.user).exists()
+        return False
+
 
 class DatasetListSerializer(serializers.ModelSerializer):
     owner          = serializers.StringRelatedField(read_only=True)
     category_name  = serializers.CharField(source="category.name", read_only=True)
     version_count  = serializers.SerializerMethodField()
     latest_version = serializers.SerializerMethodField()
+    is_favorited   = serializers.SerializerMethodField()  # ← NOVO
 
     class Meta:
         model  = Dataset
@@ -82,6 +91,7 @@ class DatasetListSerializer(serializers.ModelSerializer):
             "category", "category_name",
             "owner", "visibility", "status",
             "version_count", "latest_version",
+            "is_favorited",  # ← NOVO
             "created_at", "updated_at",
         ]
         read_only_fields = ["id", "slug", "owner", "created_at", "updated_at"]
@@ -95,8 +105,24 @@ class DatasetListSerializer(serializers.ModelSerializer):
             return {"id": latest.id, "version": latest.version}
         return None
 
+    def get_is_favorited(self, obj):  # ← NOVO
+        request = self.context.get("request")
+        if request and request.user.is_authenticated:
+            return obj.favorited_by.filter(user=request.user).exists()
+        return False
 
-# ─── NOVO: serializer de estatísticas ────────────────────────────────────────
+
+# ← NOVO: fora de qualquer outra classe
+class DatasetFavoriteSerializer(serializers.ModelSerializer):
+    dataset_name = serializers.CharField(source="dataset.name", read_only=True)
+
+    class Meta:
+        model  = DatasetFavorite
+        fields = ["id", "dataset", "dataset_name", "created_at"]
+        read_only_fields = ["created_at"]
+
+
+# ─── serializer de estatísticas ──────────────────────────────────────────────
 
 class VersionDownloadSerializer(serializers.Serializer):
     version = serializers.CharField()

@@ -21,6 +21,7 @@ urlpatterns = [
     path('datasets/<int:id>/delete/', views.dataset_delete, name='dataset_delete'),
     path('users/', views.users, name='users'),
     path('users/<int:id>/edit/', views.user_edit, name='user_edit'),
+    path('datasets/<int:id>/favorite/', views.dataset_favorite, name='dataset_favorite'),
     path('users/<int:id>/delete/', views.user_delete, name='user_delete'),
     path('auditoria/', views.auditoria, name='auditoria'),
     path('datasets/<int:id>/stats/', views.dataset_stats, name='dataset_stats'),
