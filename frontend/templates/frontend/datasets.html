@@ -52,6 +52,16 @@
             <option value="archived" {% if status_filter == 'archived' %}selected{% endif %}>Arquivado</option>
         </select>
     </div>
+
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">Guardados</label>
+        <a href="?favorites=1{% if search %}&search={{ search }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if visibility_filter %}&visibility={{ visibility_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}"
+           class="flex items-center gap-1 text-xs px-3 py-1.5 rounded border
+           {% if favorites_filter %}bg-red-500 text-white border-red-500{% else %}border-gray-200 text-gray-600 hover:bg-gray-50{% endif %}">
+            ♥ Guardados
+        </a>
+    </div>
+    
     <div class="flex gap-2">
         <button type="submit" class="text-sm bg-blue-600 text-white px-4 py-1.5 rounded hover:bg-blue-700">Filtrar</button>
         <a href="/datasets/" class="text-sm border border-gray-200 text-gray-600 px-4 py-1.5 rounded hover:bg-gray-50">Limpar</a>
