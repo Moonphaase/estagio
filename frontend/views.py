@@ -2,20 +2,20 @@ import csv
 import io
 import logging
 import os
- 
+
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from django.db.models import Q
-from django.http import FileResponse
+from django.http import FileResponse, JsonResponse
 from categories.models import Category
 from datasets.models import Dataset, DatasetVersion, DownloadLog, AuditLog, DatasetFavorite, DatasetShare
 from datasets.audit import audit, audit_dataset_changes
- 
+
 logger = logging.getLogger('accounts')
- 
- 
+
+
 @login_required
 def dashboard(request):
     if request.user.is_staff:
@@ -29,7 +29,7 @@ def dashboard(request):
         recent_datasets = qs.order_by('-created_at')[:5]
         total_datasets = qs.count()
         total_versions = DatasetVersion.objects.filter(dataset__in=qs).count()
- 
+
     total_categories = Category.objects.count()
     my_datasets = Dataset.objects.filter(owner=request.user).count()
     return render(request, 'frontend/dashboard.html', {
@@ -39,22 +39,23 @@ def dashboard(request):
         'total_versions': total_versions,
         'my_datasets': my_datasets,
     })
- 
- 
+
+
 @login_required
 def datasets(request):
     search            = request.GET.get('search', '').strip()
     category_filter   = request.GET.get('category', '')
     visibility_filter = request.GET.get('visibility', '')
     status_filter     = request.GET.get('status', '')
- 
+    favorites_filter  = request.GET.get('favorites', '')
+
     if request.user.is_staff:
         qs = Dataset.objects.all()
     else:
         qs = Dataset.objects.filter(
             Q(visibility='public') | Q(owner=request.user)
         )
- 
+
     if search:
         qs = qs.filter(Q(name__icontains=search) | Q(description__icontains=search))
     if category_filter:
@@ -63,7 +64,12 @@ def datasets(request):
         qs = qs.filter(visibility=visibility_filter)
     if status_filter:
         qs = qs.filter(status=status_filter)
- 
+    if favorites_filter:
+        favorited_ids = DatasetFavorite.objects.filter(
+            user=request.user
+        ).values_list('dataset_id', flat=True)
+        qs = qs.filter(id__in=favorited_ids)
+
     qs = qs.order_by('-created_at')
     categories = Category.objects.all()
     return render(request, 'frontend/datasets.html', {
@@ -73,9 +79,10 @@ def datasets(request):
         'category_filter': category_filter,
         'visibility_filter': visibility_filter,
         'status_filter': status_filter,
+        'favorites_filter': favorites_filter,
     })
- 
- 
+
+
 def login_view(request):
     if request.method == 'POST':
         email = request.POST.get('email')
@@ -89,52 +96,53 @@ def login_view(request):
             logger.warning(f'Login falhado: {email}')
             return render(request, 'frontend/login.html', {'error': 'Email ou password incorretos'})
     return render(request, 'frontend/login.html')
- 
- 
+
+
 @login_required
 def register_view(request):
     if not request.user.is_staff:
         messages.error(request, 'Apenas administradores podem registar novos utilizadores.')
         return redirect('dashboard')
- 
+
     if request.method == 'POST':
         username = request.POST.get('username')
         email    = request.POST.get('email')
         password = request.POST.get('password')
- 
+
         from django.contrib.auth import get_user_model
         User = get_user_model()
- 
+
         if User.objects.filter(username=username).exists():
             return render(request, 'frontend/register.html', {'error': 'Nome de utilizador já existe'})
         if User.objects.filter(email=email).exists():
             return render(request, 'frontend/register.html', {'error': 'Email já está registado'})
- 
+
         User.objects.create_user(username=username, email=email, password=password)
         logger.info(f'Utilizador criado: {email} por {request.user.email}')
         messages.success(request, 'Utilizador criado com sucesso!')
         return redirect('users')
- 
+
     return render(request, 'frontend/register.html')
- 
- 
+
+
 @login_required
 def dataset_detail(request, id):
     dataset = get_object_or_404(Dataset, id=id)
- 
+
     has_share = DatasetShare.objects.filter(dataset=dataset, shared_with=request.user).exists()
     if dataset.visibility == 'private' and dataset.owner != request.user and not request.user.is_staff and not has_share:
         messages.error(request, 'Não tens permissão para ver este dataset.')
         return redirect('datasets')
- 
+
     versions = DatasetVersion.objects.filter(dataset=dataset).order_by('-created_at')
     is_owner = dataset.owner == request.user
     is_favorited = DatasetFavorite.objects.filter(user=request.user, dataset=dataset).exists()
- 
+    comments = []
+
     tags = []
     if hasattr(dataset, 'metadata') and dataset.metadata:
         tags = dataset.metadata.tags or []
- 
+
     csv_headers = []
     csv_rows = []
     latest = versions.filter(is_latest=True).first()
@@ -151,19 +159,31 @@ def dataset_detail(request, id):
                     csv_rows = rows[1:6]
         except Exception:
             pass
- 
+
     return render(request, 'frontend/dataset_detail.html', {
         'dataset': dataset,
         'versions': versions,
         'is_owner': is_owner,
         'is_favorited': is_favorited,
         'tags': tags,
-        'comments': [],
+        'comments': comments,
         'csv_headers': csv_headers,
         'csv_rows': csv_rows,
     })
- 
- 
+
+
+@login_required
+def dataset_favorite(request, id):
+    dataset = get_object_or_404(Dataset, id=id)
+    favorite, created = DatasetFavorite.objects.get_or_create(
+        user=request.user, dataset=dataset
+    )
+    if not created:
+        favorite.delete()
+        return JsonResponse({'is_favorited': False})
+    return JsonResponse({'is_favorited': True})
+
+
 @login_required
 def dataset_create(request):
     if request.method == 'POST':
@@ -172,14 +192,14 @@ def dataset_create(request):
         category_id = request.POST.get('category')
         visibility  = request.POST.get('visibility', 'public')
         status_val  = request.POST.get('status', 'draft')
- 
+
         category = None
         if category_id:
             try:
                 category = Category.objects.get(id=category_id)
             except Category.DoesNotExist:
                 pass
- 
+
         dataset = Dataset.objects.create(
             name=name, description=description, category=category,
             owner=request.user, visibility=visibility, status=status_val
@@ -189,25 +209,25 @@ def dataset_create(request):
         logger.info(f'Dataset criado: "{dataset.name}" por {request.user.email}')
         messages.success(request, 'Dataset criado com sucesso!')
         return redirect('dataset_detail', dataset.id)
- 
+
     categories = Category.objects.all()
     return render(request, 'frontend/dataset_create.html', {'categories': categories})
- 
- 
+
+
 @login_required
 def categories(request):
     all_categories = Category.objects.all()
     return render(request, 'frontend/categories.html', {'categories': all_categories})
- 
- 
+
+
 @login_required
 def dataset_edit(request, id):
     dataset = get_object_or_404(Dataset, id=id)
- 
+
     if dataset.owner != request.user and not request.user.is_staff:
         messages.error(request, 'Não tens permissão para editar este dataset.')
         return redirect('dataset_detail', dataset.id)
- 
+
     if request.method == 'POST':
         before = {
             "name": dataset.name,
@@ -216,13 +236,13 @@ def dataset_edit(request, id):
             "status": dataset.status,
             "category": str(dataset.category),
         }
- 
+
         dataset.name        = request.POST.get('name')
         dataset.description = request.POST.get('description')
         category_id         = request.POST.get('category')
         dataset.visibility  = request.POST.get('visibility', 'public')
         dataset.status      = request.POST.get('status', 'draft')
- 
+
         if category_id:
             try:
                 dataset.category = Category.objects.get(id=category_id)
@@ -230,9 +250,9 @@ def dataset_edit(request, id):
                 dataset.category = None
         else:
             dataset.category = None
- 
+
         dataset.save()
- 
+
         after = {
             "name": dataset.name,
             "description": dataset.description,
@@ -243,23 +263,23 @@ def dataset_edit(request, id):
         changes = audit_dataset_changes(before, after)
         audit(request, "update", "dataset", dataset.id,
               f"Dataset '{dataset.name}' editado", changes=changes)
- 
+
         logger.info(f'Dataset editado: "{dataset.name}" por {request.user.email}')
         messages.success(request, 'Dataset atualizado com sucesso!')
         return redirect('dataset_detail', dataset.id)
- 
+
     categories = Category.objects.all()
     return render(request, 'frontend/dataset_edit.html', {'dataset': dataset, 'categories': categories})
- 
- 
+
+
 @login_required
 def dataset_versions(request, id):
     dataset = get_object_or_404(Dataset, id=id)
- 
+
     if dataset.visibility == 'private' and dataset.owner != request.user and not request.user.is_staff:
         messages.error(request, 'Não tens permissão para ver este dataset.')
         return redirect('datasets')
- 
+
     versions = DatasetVersion.objects.filter(dataset=dataset).order_by('-created_at')
     is_owner = dataset.owner == request.user
     return render(request, 'frontend/dataset_versions.html', {
@@ -267,41 +287,41 @@ def dataset_versions(request, id):
         'versions': versions,
         'is_owner': is_owner,
     })
- 
- 
+
+
 def logout_view(request):
     logger.info(f'Logout: {request.user.email if request.user.is_authenticated else "anonimo"}')
     logout(request)
     return redirect('login')
- 
- 
+
+
 @login_required
 def dataset_delete(request, id):
     dataset = get_object_or_404(Dataset, id=id)
- 
+
     if dataset.owner != request.user and not request.user.is_staff:
         messages.error(request, 'Não tens permissão para apagar este dataset.')
         return redirect('dataset_detail', dataset.id)
- 
+
     if request.method == 'POST':
         audit(request, "delete", "dataset", dataset.id,
               f"Dataset '{dataset.name}' apagado")
         logger.info(f'Dataset apagado: "{dataset.name}" por {request.user.email}')
         dataset.delete()
     return redirect('datasets')
- 
- 
+
+
 @login_required
 def category_create(request):
     if not request.user.is_staff:
         messages.error(request, 'Não tens permissão para criar categorias.')
         return redirect('categories')
- 
+
     if request.method == 'POST':
         name        = request.POST.get('name')
         slug        = request.POST.get('slug')
         description = request.POST.get('description')
- 
+
         if Category.objects.filter(name=name).exists():
             return render(request, 'frontend/category_create.html', {
                 'error': f'Já existe uma categoria com o nome "{name}".'
@@ -310,7 +330,7 @@ def category_create(request):
             return render(request, 'frontend/category_create.html', {
                 'error': f'Já existe uma categoria com o slug "{slug}".'
             })
- 
+
         if name and slug:
             cat = Category.objects.create(name=name, slug=slug, description=description)
             audit(request, "create", "category", cat.id,
@@ -318,34 +338,34 @@ def category_create(request):
             logger.info(f'Categoria criada: "{name}" por {request.user.email}')
             messages.success(request, 'Categoria criada com sucesso!')
             return redirect('categories')
- 
+
     return render(request, 'frontend/category_create.html')
- 
- 
+
+
 @login_required
 def version_create(request, id):
     dataset = get_object_or_404(Dataset, id=id)
- 
+
     if dataset.owner != request.user and not request.user.is_staff:
         messages.error(request, 'Não tens permissão para criar versões neste dataset.')
         return redirect('dataset_detail', dataset.id)
- 
+
     if request.method == 'POST':
         version = request.POST.get('version')
         title   = request.POST.get('title')
         notes   = request.POST.get('notes')
         file    = request.FILES.get('file')
- 
+
         if not version or not file:
             return render(request, 'frontend/version_create.html', {
                 'dataset': dataset, 'error': 'Versão e ficheiro são obrigatórios.'
             })
- 
+
         if DatasetVersion.objects.filter(dataset=dataset, version=version).exists():
             return render(request, 'frontend/version_create.html', {
                 'dataset': dataset, 'error': f'Já existe a versão {version} neste dataset.'
             })
- 
+
         DatasetVersion.objects.filter(dataset=dataset, is_latest=True).update(is_latest=False)
         v = DatasetVersion.objects.create(
             dataset=dataset, version=version, title=title,
@@ -356,15 +376,15 @@ def version_create(request, id):
         logger.info(f'Versão criada: "{dataset.name}" v{version} por {request.user.email}')
         messages.success(request, f'Versão {version} criada com sucesso!')
         return redirect('dataset_versions', dataset.id)
- 
+
     return render(request, 'frontend/version_create.html', {'dataset': dataset})
- 
- 
+
+
 @login_required
 def profile(request):
     if request.method == 'POST':
         form_type = request.POST.get('form_type')
- 
+
         if form_type == 'profile':
             request.user.username   = request.POST.get('username')
             request.user.email      = request.POST.get('email')
@@ -372,12 +392,12 @@ def profile(request):
             request.user.last_name  = request.POST.get('last_name')
             request.user.save()
             messages.success(request, 'Perfil atualizado com sucesso!')
- 
+
         elif form_type == 'password':
             current = request.POST.get('current_password')
             new     = request.POST.get('new_password')
             confirm = request.POST.get('confirm_password')
- 
+
             if not request.user.check_password(current):
                 messages.error(request, 'Password atual incorreta.')
             elif new != confirm:
@@ -389,12 +409,12 @@ def profile(request):
                 request.user.save()
                 login(request, request.user)
                 messages.success(request, 'Password alterada com sucesso!')
- 
+
         return redirect('profile')
- 
+
     return render(request, 'frontend/profile.html')
- 
- 
+
+
 @login_required
 def users(request):
     if not request.user.is_staff:
@@ -404,8 +424,8 @@ def users(request):
     User = get_user_model()
     all_users = User.objects.all().order_by('date_joined')
     return render(request, 'frontend/users.html', {'users': all_users})
- 
- 
+
+
 @login_required
 def user_edit(request, id):
     if not request.user.is_staff:
@@ -440,8 +460,8 @@ def user_edit(request, id):
         messages.success(request, 'Utilizador atualizado com sucesso!')
         return redirect('users')
     return render(request, 'frontend/user_edit.html', {'edited_user': edited_user})
- 
- 
+
+
 @login_required
 def user_delete(request, id):
     if not request.user.is_staff:
@@ -456,17 +476,17 @@ def user_delete(request, id):
         edited_user.delete()
         messages.success(request, 'Utilizador apagado com sucesso.')
     return redirect('users')
- 
- 
+
+
 @login_required
 def version_delete(request, id, version_id):
     dataset = get_object_or_404(Dataset, id=id)
     version = get_object_or_404(DatasetVersion, id=version_id, dataset=dataset)
- 
+
     if dataset.owner != request.user and not request.user.is_staff:
         messages.error(request, 'Não tens permissão para apagar esta versão.')
         return redirect('dataset_versions', dataset.id)
- 
+
     if request.method == 'POST':
         was_latest = version.is_latest
         audit(request, "delete", "version", version.id,
@@ -481,27 +501,27 @@ def version_delete(request, id, version_id):
                 next_version.is_latest = True
                 next_version.save(update_fields=['is_latest'])
         messages.success(request, 'Versão apagada com sucesso.')
- 
+
     return redirect('dataset_versions', dataset.id)
- 
- 
+
+
 @login_required
 def dataset_stats(request, id):
     from django.db.models import Count
     from django.utils import timezone
     from datetime import timedelta
- 
+
     dataset = get_object_or_404(Dataset, id=id)
- 
+
     if dataset.visibility == 'private' and dataset.owner != request.user and not request.user.is_staff:
         messages.error(request, 'Não tens permissão para ver este dataset.')
         return redirect('datasets')
- 
+
     now = timezone.now()
     total_downloads   = DownloadLog.objects.filter(dataset=dataset).count()
     downloads_7_days  = DownloadLog.objects.filter(dataset=dataset, downloaded_at__gte=now - timedelta(days=7)).count()
     downloads_30_days = DownloadLog.objects.filter(dataset=dataset, downloaded_at__gte=now - timedelta(days=30)).count()
- 
+
     by_version = (
         DownloadLog.objects
         .filter(dataset=dataset, version__isnull=False)
@@ -509,14 +529,14 @@ def dataset_stats(request, id):
         .annotate(total=Count("id"))
         .order_by("-total")
     )
- 
+
     recent_logs = (
         DownloadLog.objects
         .filter(dataset=dataset)
         .select_related("user", "version")
         .order_by("-downloaded_at")[:20]
     )
- 
+
     return render(request, 'frontend/dataset_stats.html', {
         'dataset': dataset,
         'total_downloads': total_downloads,
@@ -525,51 +545,51 @@ def dataset_stats(request, id):
         'by_version': by_version,
         'recent_logs': recent_logs,
     })
- 
- 
+
+
 @login_required
 def version_download(request, id, version_id):
     dataset = get_object_or_404(Dataset, id=id)
     version = get_object_or_404(DatasetVersion, id=version_id, dataset=dataset)
- 
+
     if not version.file or not os.path.exists(version.file.path):
         messages.error(request, 'Ficheiro não encontrado.')
         return redirect('dataset_versions', dataset.id)
- 
+
     DownloadLog.objects.create(
         dataset=dataset,
         version=version,
         user=request.user,
         ip_address=request.META.get('REMOTE_ADDR'),
     )
- 
+
     response = FileResponse(version.file.open('rb'), as_attachment=True)
     response['Content-Length'] = version.file_size
     return response
- 
- 
+
+
 @login_required
 def auditoria(request):
     if not request.user.is_staff:
         messages.error(request, 'Não tens permissão para ver esta página.')
         return redirect('dashboard')
- 
+
     logs = AuditLog.objects.select_related("user").all()
- 
+
     action   = request.GET.get('action', '')
     resource = request.GET.get('resource', '')
     user     = request.GET.get('user', '')
- 
+
     if action:
         logs = logs.filter(action=action)
     if resource:
         logs = logs.filter(resource=resource)
     if user:
         logs = logs.filter(user__username__icontains=user)
- 
+
     return render(request, 'frontend/auditoria.html', {'logs': logs})
- 
- 
+
+
 @login_required
 def dataset_submit(request, id):
     dataset = get_object_or_404(Dataset, id=id)
@@ -584,8 +604,8 @@ def dataset_submit(request, id):
         dataset.save()
         messages.success(request, 'Dataset submetido para aprovação.')
     return redirect('dataset_detail', dataset.id)
- 
- 
+
+
 @login_required
 def dataset_approve(request, id):
     if not request.user.is_staff:
@@ -598,8 +618,8 @@ def dataset_approve(request, id):
         logger.info(f'Dataset aprovado: "{dataset.name}" por {request.user.email}')
         messages.success(request, f'Dataset "{dataset.name}" aprovado e publicado.')
     return redirect('aprovacoes')
- 
- 
+
+
 @login_required
 def dataset_reject(request, id):
     if not request.user.is_staff:
@@ -613,8 +633,8 @@ def dataset_reject(request, id):
         logger.info(f'Dataset rejeitado: "{dataset.name}" por {request.user.email}. Motivo: {motivo}')
         messages.warning(request, f'Dataset "{dataset.name}" rejeitado.')
     return redirect('aprovacoes')
- 
- 
+
+
 @login_required
 def aprovacoes(request):
     if not request.user.is_staff:
@@ -622,19 +642,19 @@ def aprovacoes(request):
         return redirect('dashboard')
     pendentes = Dataset.objects.filter(status='pending').order_by('-created_at')
     return render(request, 'frontend/aprovacoes.html', {'pendentes': pendentes})
- 
- 
+
+
 @login_required
 def dataset_share(request, id):
     dataset = get_object_or_404(Dataset, id=id)
- 
+
     if dataset.owner != request.user and not request.user.is_staff:
         messages.error(request, 'Não tens permissão para partilhar este dataset.')
         return redirect('dataset_detail', dataset.id)
- 
+
     from django.contrib.auth import get_user_model
     User = get_user_model()
- 
+
     if request.method == 'POST':
         email = request.POST.get('email', '').strip()
         try:
@@ -652,37 +672,25 @@ def dataset_share(request, id):
                 messages.success(request, f'Dataset partilhado com {email}.')
         except User.DoesNotExist:
             messages.error(request, f'Não existe nenhum utilizador com o email {email}.')
- 
+
     shares = DatasetShare.objects.filter(dataset=dataset).select_related('shared_with')
     return render(request, 'frontend/dataset_share.html', {
         'dataset': dataset,
         'shares': shares,
     })
- 
- 
+
+
 @login_required
 def dataset_share_remove(request, id, share_id):
     dataset = get_object_or_404(Dataset, id=id)
- 
+
     if dataset.owner != request.user and not request.user.is_staff:
         messages.error(request, 'Não tens permissão.')
         return redirect('dataset_detail', dataset.id)
- 
+
     if request.method == 'POST':
         share = get_object_or_404(DatasetShare, id=share_id, dataset=dataset)
         share.delete()
         messages.success(request, 'Partilha removida.')
- 
-    return redirect('dataset_share', dataset.id)
 
-@login_required
-def dataset_favorite(request, id):
-    from django.http import JsonResponse
-    dataset = get_object_or_404(Dataset, id=id)
-    favorite, created = DatasetFavorite.objects.get_or_create(
-        user=request.user, dataset=dataset
-    )
-    if not created:
-        favorite.delete()
-        return JsonResponse({'is_favorited': False})
-    return JsonResponse({'is_favorited': True})
+    return redirect('dataset_share', dataset.id)

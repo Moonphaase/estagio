@@ -1,25 +1,19 @@
 {% extends "frontend/base.html" %}
-
 {% block title %}Novo Dataset{% endblock %}
 {% block page_title %}Novo Dataset{% endblock %}
 {% block nav_datasets %}bg-gray-100 font-medium text-gray-900{% endblock %}
-
 {% block content %}
-
 <div class="bg-white rounded-lg border border-gray-200 max-w-2xl p-6">
     <form method="POST">
         {% csrf_token %}
-
         <div class="mb-4">
             <label class="block text-xs text-gray-500 mb-1">Nome</label>
             <input type="text" name="name" class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400" placeholder="Ex: População de Lisboa 2024" required>
         </div>
-
         <div class="mb-4">
             <label class="block text-xs text-gray-500 mb-1">Descrição</label>
             <textarea name="description" rows="3" class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400" placeholder="Descreve o dataset..."></textarea>
         </div>
-
         <div class="mb-4">
             <label class="block text-xs text-gray-500 mb-1">Categoria</label>
             <select name="category" class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400">
@@ -29,7 +23,6 @@
                 {% endfor %}
             </select>
         </div>
-
         <div class="mb-4">
             <label class="block text-xs text-gray-500 mb-1">Visibilidade</label>
             <select name="visibility" class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400">
@@ -38,16 +31,16 @@
                 <option value="internal">Interno</option>
             </select>
         </div>
-
         <div class="mb-4">
             <label class="block text-xs text-gray-500 mb-1">Estado</label>
             <select name="status" class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400">
                 <option value="draft">Rascunho</option>
+                {% if request.user.is_staff %}
                 <option value="published">Publicado</option>
                 <option value="archived">Arquivado</option>
+                {% endif %}
             </select>
         </div>
-
         <div class="mb-6">
             <label class="block text-xs text-gray-500 mb-1">Tags</label>
             <input type="text" name="tags" id="tags-input"
@@ -56,19 +49,16 @@
             <p class="text-xs text-gray-400 mt-1">Separa as tags por vírgula.</p>
             <div id="tags-preview" class="flex flex-wrap gap-1 mt-2"></div>
         </div>
-
         <div class="flex gap-2">
             <button type="submit" class="bg-blue-600 text-white text-sm px-4 py-2 rounded hover:bg-blue-700">
                 Criar Dataset
             </button>
-            <a href="/datasets" class="text-sm text-gray-500 px-4 py-2 rounded border border-gray-200 hover:bg-gray-50">
+            <a href="/datasets/" class="text-sm text-gray-500 px-4 py-2 rounded border border-gray-200 hover:bg-gray-50">
                 Cancelar
             </a>
         </div>
-
     </form>
 </div>
-
 <script>
     document.getElementById('tags-input').addEventListener('input', function () {
         const preview = document.getElementById('tags-preview');
@@ -78,5 +68,4 @@
         ).join('');
     });
 </script>
-
 {% endblock %}

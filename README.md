@@ -86,4 +86,6 @@ estagio/
 ## Autor
 
 Desenvolvido por João, Chico e Marco.
+qualquer duvida so ver o tutorial no youtube de como fazer setup https://www.youtube.com/watch?v=koRsyjMcJYY
+**
 
