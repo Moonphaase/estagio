@@ -124,6 +124,37 @@ def register_view(request):
 
     return render(request, 'frontend/register.html')
 
+@login_required
+def comment_create(request, id):
+    dataset = get_object_or_404(Dataset, id=id)
+    if request.method == 'POST':
+        content = request.POST.get('content', '').strip()
+        if content:
+            from datasets.models import Comment
+            Comment.objects.create(
+                dataset=dataset,
+                author=request.user,
+                content=content
+            )
+            messages.success(request, 'Comentário adicionado.')
+    return redirect('dataset_detail', dataset.id)
+
+
+@login_required
+def comment_delete(request, id, comment_id):
+    from datasets.models import Comment
+    dataset = get_object_or_404(Dataset, id=id)
+    comment = get_object_or_404(Comment, id=comment_id, dataset=dataset)
+
+    if comment.author != request.user and not request.user.is_staff:
+        messages.error(request, 'Não tens permissão para apagar este comentário.')
+        return redirect('dataset_detail', dataset.id)
+
+    if request.method == 'POST':
+        comment.delete()
+        messages.success(request, 'Comentário apagado.')
+
+    return redirect('dataset_detail', dataset.id)
 
 @login_required
 def dataset_detail(request, id):
@@ -137,7 +168,8 @@ def dataset_detail(request, id):
     versions = DatasetVersion.objects.filter(dataset=dataset).order_by('-created_at')
     is_owner = dataset.owner == request.user
     is_favorited = DatasetFavorite.objects.filter(user=request.user, dataset=dataset).exists()
-    comments = []
+    from datasets.models import Comment
+    comments = Comment.objects.filter(dataset=dataset).select_related('author').order_by('created_at')
 
     tags = []
     if hasattr(dataset, 'metadata') and dataset.metadata:
