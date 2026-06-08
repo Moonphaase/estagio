@@ -398,6 +398,27 @@ def version_create(request, id):
                 'dataset': dataset, 'error': f'Já existe a versão {version} neste dataset.'
             })
 
+        # ── Validações do core ──────────────────────────────────────────
+        from core.helpers import validate_file_extension, validate_file_size, generate_checksum, dataset_upload_path
+        from django.core.exceptions import ValidationError
+
+        try:
+            validate_file_extension(file)
+            validate_file_size(file)
+        except ValidationError as e:
+            return render(request, 'frontend/version_create.html', {
+                'dataset': dataset, 'error': str(e.message)
+            })
+
+        checksum = generate_checksum(file)
+        if dataset.versions.filter(checksum=checksum).exists():
+            return render(request, 'frontend/version_create.html', {
+                'dataset': dataset, 'error': 'Este ficheiro já foi enviado numa versão anterior.'
+            })
+
+        file.name = dataset_upload_path(dataset.id, version, file.name)
+        # ───────────────────────────────────────────────────────────────
+
         DatasetVersion.objects.filter(dataset=dataset, is_latest=True).update(is_latest=False)
         v = DatasetVersion.objects.create(
             dataset=dataset, version=version, title=title,

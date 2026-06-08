@@ -1,4 +1,3 @@
-import hashlib
 import os
 
 from django.conf import settings
@@ -6,24 +5,9 @@ from django.db import models
 from django.utils.text import slugify
 
 from categories.models import Category
+from core.helpers import validate_file_extension, validate_file_size, generate_checksum
 
 ALLOWED_EXTENSIONS = [".csv", ".json", ".xlsx", ".parquet", ".zip"]
-
-
-def validate_file_extension(value):
-    from django.core.exceptions import ValidationError
-    ext = os.path.splitext(value.name)[1].lower()
-    if ext not in ALLOWED_EXTENSIONS:
-        raise ValidationError(
-            f"Extensão não permitida. Aceites: {', '.join(ALLOWED_EXTENSIONS)}"
-        )
-
-
-def validate_file_size(value):
-    from django.core.exceptions import ValidationError
-    max_size = 500 * 1024 * 1024
-    if value.size > max_size:
-        raise ValidationError("O ficheiro não pode exceder 500 MB.")
 
 
 def dataset_version_upload_path(instance, filename):
@@ -125,10 +109,7 @@ class DatasetVersion(models.Model):
         if self.file and not self.checksum:
             self.file_size = self.file.size
             self.file_type = os.path.splitext(self.file.name)[1].lower().lstrip(".")
-            sha256 = hashlib.sha256()
-            for chunk in self.file.chunks():
-                sha256.update(chunk)
-            self.checksum = sha256.hexdigest()
+            self.checksum = generate_checksum(self.file)
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -243,18 +224,18 @@ class AuditLog(models.Model):
 
 
 class DatasetShare(models.Model):
-    dataset    = models.ForeignKey(
+    dataset     = models.ForeignKey(
         Dataset, on_delete=models.CASCADE, related_name="shares"
     )
     shared_with = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
         related_name="shared_datasets"
     )
-    shared_by  = models.ForeignKey(
+    shared_by   = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
         related_name="dataset_shares_made"
     )
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name = "Partilha de Dataset"
@@ -266,15 +247,13 @@ class DatasetShare(models.Model):
         return f"{self.dataset.name} partilhado com {self.shared_with}"
 
 
-class DatasetFavorite(models.Model):  # ← fora do DatasetShare, sem indentação
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+class DatasetFavorite(models.Model):
+    user    = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
         related_name='favorites'
     )
     dataset = models.ForeignKey(
-        Dataset,
-        on_delete=models.CASCADE,
+        Dataset, on_delete=models.CASCADE,
         related_name='favorited_by'
     )
     created_at = models.DateTimeField(auto_now_add=True)
@@ -283,4 +262,4 @@ class DatasetFavorite(models.Model):  # ← fora do DatasetShare, sem indentaç�
         unique_together = [("user", "dataset")]
 
     def __str__(self):
-        return f"{self.user} ♥ {self.dataset.name}"  # ← .name, não .title
+        return f"{self.user} ♥ {self.dataset.name}"
