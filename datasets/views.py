@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 import os
 
 from django.db import transaction
@@ -17,12 +17,12 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
-from .models import Dataset, DatasetVersion, DownloadLog, DatasetFavorite  # ← DatasetFavorite
+from .models import Dataset, DatasetVersion, DownloadLog, DatasetFavorite  # â† DatasetFavorite
 from .permissions import IsOwnerOrAdmin
 from .serializers import (
     DatasetSerializer, DatasetListSerializer,
     DatasetVersionSerializer, DatasetStatsSerializer,
-    DatasetFavoriteSerializer,  # ← novo
+    DatasetFavoriteSerializer,  # â† novo
 )
 
 logger = logging.getLogger('datasets')
@@ -35,7 +35,7 @@ def get_client_ip(request):
     return request.META.get("REMOTE_ADDR")
 
 
-class DatasetViewSet(viewsets.ModelViewSet):  # ← só UMA definição
+class DatasetViewSet(viewsets.ModelViewSet):  # â† sÃ³ UMA definiÃ§Ã£o
     queryset = Dataset.objects.select_related("owner", "category", "metadata")
     filter_backends  = [filters.SearchFilter, filters.OrderingFilter]
     search_fields    = ["name", "description", "category__name"]
@@ -95,7 +95,7 @@ class DatasetViewSet(viewsets.ModelViewSet):  # ← só UMA definição
         logger.info(f'Dataset apagado: "{instance.name}" por {request.user.email}')
         return super().destroy(request, *args, **kwargs)
 
-    # ── FAVORITOS ────────────────────────────────────────────────────────────
+    # â”€â”€ FAVORITOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def favorite(self, request, pk=None):
@@ -117,16 +117,16 @@ class DatasetViewSet(viewsets.ModelViewSet):  # ← só UMA definição
         serializer = DatasetFavoriteSerializer(favorites, many=True)
         return Response(serializer.data)
 
-    # ── DOWNLOADS ────────────────────────────────────────────────────────────
+    # â”€â”€ DOWNLOADS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @action(detail=True, methods=["get"], url_path="latest/download")
     def latest_download(self, request, pk=None):
         dataset = self.get_object()
         version = dataset.versions.filter(is_latest=True).first()
         if not version:
-            return Response({"detail": "Este dataset não tem versões."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "Este dataset nÃ£o tem versÃµes."}, status=status.HTTP_404_NOT_FOUND)
         if not version.file or not os.path.exists(version.file.path):
-            return Response({"detail": "Ficheiro não encontrado no servidor."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "Ficheiro nÃ£o encontrado no servidor."}, status=status.HTTP_404_NOT_FOUND)
         DownloadLog.objects.create(
             dataset=dataset, version=version,
             user=request.user if request.user.is_authenticated else None,
@@ -183,7 +183,26 @@ class DatasetVersionViewSet(viewsets.ModelViewSet):
         dataset = self.get_dataset()
         if dataset.owner != self.request.user and not self.request.user.is_staff:
             raise PermissionDenied("Apenas o dono ou um admin pode criar versões.")
+
         version_number = serializer.validated_data.get("version")
+        file = serializer.validated_data.get("file")
+
+        # Validações do core
+        checksum = None
+        if file:
+            try:
+                validate_file_extension(file)
+                validate_file_size(file)
+            except ValueError as e:
+                raise PermissionDenied(str(e))
+
+            checksum = generate_checksum(file)
+
+            if dataset.versions.filter(checksum=checksum).exists():
+                raise PermissionDenied("Este ficheiro já foi enviado numa versão anterior.")
+
+            file.name = dataset_upload_path(dataset.id, version_number, file.name)
+
         with transaction.atomic():
             if dataset.versions.filter(version=version_number).exists():
                 raise PermissionDenied(f"A versão '{version_number}' já existe neste dataset.")
@@ -192,6 +211,8 @@ class DatasetVersionViewSet(viewsets.ModelViewSet):
                 dataset=dataset,
                 created_by=self.request.user,
                 is_latest=True,
+                checksum=checksum if file else None,
+                file_size=file.size if file else None,
             )
             logger.info(f'Versão criada: "{dataset.name}" v{version.version} por {self.request.user.email}')
 
@@ -199,9 +220,9 @@ class DatasetVersionViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         dataset  = self.get_dataset()
         if dataset.owner != request.user and not request.user.is_staff:
-            raise PermissionDenied("Apenas o dono ou um admin pode apagar versões.")
+            raise PermissionDenied("Apenas o dono ou um admin pode apagar versÃµes.")
         was_latest = instance.is_latest
-        logger.info(f'Versão apagada: "{dataset.name}" v{instance.version} por {request.user.email}')
+        logger.info(f'VersÃ£o apagada: "{dataset.name}" v{instance.version} por {request.user.email}')
         instance.delete()
         if was_latest:
             next_latest = dataset.versions.order_by("-created_at").first()
@@ -214,9 +235,9 @@ class DatasetVersionViewSet(viewsets.ModelViewSet):
     def download(self, request, dataset_pk=None, pk=None):
         version = self.get_object()
         if not version.file:
-            return Response({"detail": "Ficheiro não disponível."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "Ficheiro nÃ£o disponÃ­vel."}, status=status.HTTP_404_NOT_FOUND)
         if not os.path.exists(version.file.path):
-            return Response({"detail": "Ficheiro não encontrado no servidor."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "Ficheiro nÃ£o encontrado no servidor."}, status=status.HTTP_404_NOT_FOUND)
         DownloadLog.objects.create(
             dataset=version.dataset, version=version,
             user=request.user if request.user.is_authenticated else None,
