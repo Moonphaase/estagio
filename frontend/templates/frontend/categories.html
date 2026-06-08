@@ -8,7 +8,6 @@
 
 <div class="flex justify-between items-center mb-4">
     <h2 class="text-sm font-semibold text-gray-700">Todas as categorias</h2>
-
     {% if request.user.is_staff %}
     <a href="{% url 'category_create' %}">
         <button class="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600">
@@ -18,7 +17,24 @@
     {% endif %}
 </div>
 
+<!-- Filtro -->
+<form method="get" class="bg-white rounded-lg border border-gray-200 p-4 mb-4 flex flex-wrap gap-3 items-end">
+    <div class="flex-1 min-w-48">
+        <label class="block text-xs text-gray-500 mb-1">Pesquisar</label>
+        <input type="text" name="search" value="{{ search }}" placeholder="Nome ou descrição..."
+            class="w-full text-sm border border-gray-200 rounded px-3 py-1.5 focus:outline-none focus:border-blue-400">
+    </div>
+    <div class="flex gap-2">
+        <button type="submit" class="text-sm bg-blue-600 text-white px-4 py-1.5 rounded hover:bg-blue-700">Filtrar</button>
+        <a href="{% url 'categories' %}" class="text-sm border border-gray-200 text-gray-600 px-4 py-1.5 rounded hover:bg-gray-50">Limpar</a>
+    </div>
+</form>
+
 <div class="bg-white rounded-lg border border-gray-200">
+    <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+        <span class="text-sm font-semibold text-gray-700">Categorias</span>
+        <span class="text-xs text-gray-400">{{ categories|length }} resultado(s)</span>
+    </div>
     <table class="w-full text-sm">
         <thead class="bg-gray-50 text-xs text-gray-500">
             <tr>
@@ -27,7 +43,6 @@
                 <th class="px-4 py-2 text-left">Criado em</th>
             </tr>
         </thead>
-
         <tbody class="divide-y divide-gray-100">
             {% for category in categories %}
             <tr class="hover:bg-gray-50">
@@ -38,7 +53,7 @@
             {% empty %}
             <tr>
                 <td colspan="3" class="px-4 py-6 text-center text-gray-400">
-                    Ainda não há categorias.
+                    Nenhuma categoria encontrada.
                 </td>
             </tr>
             {% endfor %}

@@ -248,8 +248,14 @@ def dataset_create(request):
 
 @login_required
 def categories(request):
-    all_categories = Category.objects.all()
-    return render(request, 'frontend/categories.html', {'categories': all_categories})
+    search = request.GET.get('search', '').strip()
+    qs = Category.objects.all()
+    if search:
+        qs = qs.filter(Q(name__icontains=search) | Q(description__icontains=search))
+    return render(request, 'frontend/categories.html', {
+        'categories': qs,
+        'search': search,
+    })
 
 
 @login_required
