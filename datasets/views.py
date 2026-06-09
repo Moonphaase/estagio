@@ -1,8 +1,7 @@
 ﻿import logging
-import os
 
-from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.core.exceptions import ValidationError
 from django.db.models import Q, Count
 from django.http import FileResponse
 from django.utils import timezone
@@ -37,7 +36,7 @@ def get_client_ip(request):
 
 
 class DatasetViewSet(viewsets.ModelViewSet):
-    queryset = Dataset.objects.select_related("owner", "category", "metadata")
+    queryset         = Dataset.objects.select_related("owner", "category", "metadata")
     filter_backends  = [filters.SearchFilter, filters.OrderingFilter]
     search_fields    = ["name", "description", "category__name"]
     ordering_fields  = ["name", "created_at", "updated_at", "status", "visibility"]
@@ -53,7 +52,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
         return [permissions.IsAuthenticated(), IsOwnerOrAdmin()]
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        qs   = super().get_queryset()
         user = self.request.user
 
         if user.is_authenticated and user.is_staff:
@@ -100,10 +99,9 @@ class DatasetViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def favorite(self, request, pk=None):
-        dataset = self.get_object()
+        dataset  = self.get_object()
         favorite, created = DatasetFavorite.objects.get_or_create(
-            user=request.user,
-            dataset=dataset
+            user=request.user, dataset=dataset
         )
         if not created:
             favorite.delete()
@@ -112,7 +110,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def my_favorites(self, request):
-        favorites = DatasetFavorite.objects.filter(
+        favorites  = DatasetFavorite.objects.filter(
             user=request.user
         ).select_related('dataset')
         serializer = DatasetFavoriteSerializer(favorites, many=True)
@@ -126,15 +124,19 @@ class DatasetViewSet(viewsets.ModelViewSet):
         version = dataset.versions.filter(is_latest=True).first()
         if not version:
             return Response({"detail": "Este dataset não tem versões."}, status=status.HTTP_404_NOT_FOUND)
-        if not version.file or not os.path.exists(version.file.path):
-            return Response({"detail": "Ficheiro não encontrado no servidor."}, status=status.HTTP_404_NOT_FOUND)
+        if not version.file:
+            return Response({"detail": "Ficheiro não disponível."}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            file_obj = version.file.open("rb")
+        except Exception:
+            return Response({"detail": "Ficheiro não encontrado no armazenamento."}, status=status.HTTP_404_NOT_FOUND)
         DownloadLog.objects.create(
             dataset=dataset, version=version,
             user=request.user if request.user.is_authenticated else None,
             ip_address=get_client_ip(request),
         )
         logger.info(f'Download latest: "{dataset.name}" v{version.version} por {request.user}')
-        response = FileResponse(version.file.open("rb"), as_attachment=True)
+        response = FileResponse(file_obj, as_attachment=True)
         response["Content-Length"] = version.file_size
         return response
 
@@ -142,7 +144,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
             permission_classes=[permissions.IsAuthenticatedOrReadOnly])
     def stats(self, request, pk=None):
         dataset = self.get_object()
-        now = timezone.now()
+        now     = timezone.now()
         total   = DownloadLog.objects.filter(dataset=dataset).count()
         last_7  = DownloadLog.objects.filter(dataset=dataset, downloaded_at__gte=now - timedelta(days=7)).count()
         last_30 = DownloadLog.objects.filter(dataset=dataset, downloaded_at__gte=now - timedelta(days=30)).count()
@@ -154,10 +156,10 @@ class DatasetViewSet(viewsets.ModelViewSet):
             .order_by("-total")
         )
         data = {
-            "dataset_id": dataset.id,
-            "dataset_name": dataset.name,
-            "total_downloads": total,
-            "downloads_last_7_days": last_7,
+            "dataset_id":             dataset.id,
+            "dataset_name":           dataset.name,
+            "total_downloads":        total,
+            "downloads_last_7_days":  last_7,
             "downloads_last_30_days": last_30,
             "downloads_by_version": [
                 {"version": row["version__version"], "total": row["total"]}
@@ -181,14 +183,13 @@ class DatasetVersionViewSet(viewsets.ModelViewSet):
         return Dataset.objects.get(pk=self.kwargs["dataset_pk"])
 
     def perform_create(self, serializer):
-        dataset = self.get_dataset()
+        dataset        = self.get_dataset()
         if dataset.owner != self.request.user and not self.request.user.is_staff:
             raise PermissionDenied("Apenas o dono ou um admin pode criar versões.")
 
         version_number = serializer.validated_data.get("version")
-        file = serializer.validated_data.get("file")
+        file           = serializer.validated_data.get("file")
 
-        # ── Validações do core ──────────────────────────────────────────────
         checksum = None
         if file:
             try:
@@ -218,12 +219,14 @@ class DatasetVersionViewSet(viewsets.ModelViewSet):
             logger.info(f'Versão criada: "{dataset.name}" v{version.version} por {self.request.user.email}')
 
     def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        dataset  = self.get_dataset()
+        instance   = self.get_object()
+        dataset    = self.get_dataset()
         if dataset.owner != request.user and not request.user.is_staff:
             raise PermissionDenied("Apenas o dono ou um admin pode apagar versões.")
         was_latest = instance.is_latest
         logger.info(f'Versão apagada: "{dataset.name}" v{instance.version} por {request.user.email}')
+        if instance.file:
+            instance.file.delete(save=False)
         instance.delete()
         if was_latest:
             next_latest = dataset.versions.order_by("-created_at").first()
@@ -237,14 +240,16 @@ class DatasetVersionViewSet(viewsets.ModelViewSet):
         version = self.get_object()
         if not version.file:
             return Response({"detail": "Ficheiro não disponível."}, status=status.HTTP_404_NOT_FOUND)
-        if not os.path.exists(version.file.path):
-            return Response({"detail": "Ficheiro não encontrado no servidor."}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            file_obj = version.file.open("rb")
+        except Exception:
+            return Response({"detail": "Ficheiro não encontrado no armazenamento."}, status=status.HTTP_404_NOT_FOUND)
         DownloadLog.objects.create(
             dataset=version.dataset, version=version,
             user=request.user if request.user.is_authenticated else None,
             ip_address=get_client_ip(request),
         )
         logger.info(f'Download: v{version.version} do dataset {version.dataset.name} por {request.user}')
-        response = FileResponse(version.file.open("rb"), as_attachment=True)
+        response = FileResponse(file_obj, as_attachment=True)
         response["Content-Length"] = version.file_size
         return response

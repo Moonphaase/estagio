@@ -8,12 +8,13 @@ ALLOWED_EXTENSIONS = ['.csv', '.json', '.xlsx', '.parquet', '.zip']
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
 
 
-# Gera checksum SHA-256 de um ficheiro
 def generate_checksum(file):
-    sha256 = hashlib.sha256()
+    hasher = hashlib.sha256()
+    file.seek(0)  # garante que lê do início
     for chunk in file.chunks():
-        sha256.update(chunk)
-    return sha256.hexdigest()
+        hasher.update(chunk)
+    file.seek(0)  # repõe o ponteiro para o upload funcionar
+    return hasher.hexdigest()
 
 
 # Valida extensão do ficheiro

@@ -1,17 +1,17 @@
 from pathlib import Path
 from datetime import timedelta
+from decouple import config
 import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# ── Segurança ─────────────────────────────────────────────────────────────────
 
-SECRET_KEY = 'django-insecure-ba1nx#5aqw4jc7z-n%%mj*)ik4&3j7q!7o8w-1t0t$@kd9(s)3'
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-ba1nx#5aqw4jc7z-n%%mj*)ik4&3j7q!7o8w-1t0t$@kd9(s)3')
+DEBUG      = config('DEBUG', default=True, cast=bool)
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
 
-DEBUG = True
-
-ALLOWED_HOSTS = ["*"]
+# ── Apps ──────────────────────────────────────────────────────────────────────
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
+    'storages',
     'core',
     'accounts',
     'categories',
@@ -30,6 +31,8 @@ INSTALLED_APPS = [
     'frontend',
     'api_keys',
 ]
+
+# ── Middleware ────────────────────────────────────────────────────────────────
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -42,6 +45,8 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'config.urls'
+
+# ── Templates ─────────────────────────────────────────────────────────────────
 
 TEMPLATES = [
     {
@@ -60,16 +65,20 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
+# ── Base de dados ─────────────────────────────────────────────────────────────
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'estagio',
-        'USER': 'postgres',
-        'PASSWORD': 'joao',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME':     config('DB_NAME',     default='estagio'),
+        'USER':     config('DB_USER',     default='postgres'),
+        'PASSWORD': config('DB_PASSWORD', default='joao'),
+        'HOST':     config('DB_HOST',     default='localhost'),
+        'PORT':     config('DB_PORT',     default='5432'),
     }
 }
+
+# ── Auth ──────────────────────────────────────────────────────────────────────
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -78,17 +87,55 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
+AUTH_USER_MODEL        = 'accounts.CustomUser'
+LOGIN_URL              = 'login'
+LOGIN_REDIRECT_URL     = 'dashboard'
+LOGOUT_REDIRECT_URL    = 'login'
+
+# ── Internacionalização ───────────────────────────────────────────────────────
+
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
-USE_I18N = True
-USE_TZ = True
+TIME_ZONE     = 'UTC'
+USE_I18N      = True
+USE_TZ        = True
+
+# ── Ficheiros estáticos ───────────────────────────────────────────────────────
 
 STATIC_URL = 'static/'
 
-AUTH_USER_MODEL = 'accounts.CustomUser'
-LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'dashboard'
-LOGOUT_REDIRECT_URL = 'login'
+# ── Armazenamento (local ou MinIO/S3) ─────────────────────────────────────────
+
+USE_S3 = config('USE_S3', default=False, cast=bool)
+
+if USE_S3:
+    _use_https    = config('MINIO_USE_HTTPS', default=False, cast=bool)
+    _scheme       = 'https' if _use_https else 'http'
+
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+
+    AWS_ACCESS_KEY_ID        = config('MINIO_ACCESS_KEY')
+    AWS_SECRET_ACCESS_KEY    = config('MINIO_SECRET_KEY')
+    AWS_STORAGE_BUCKET_NAME  = config('MINIO_BUCKET')
+    AWS_S3_ENDPOINT_URL      = f"{_scheme}://{config('MINIO_ENDPOINT')}"
+    AWS_S3_USE_SSL           = _use_https
+    AWS_DEFAULT_ACL          = None
+    AWS_S3_FILE_OVERWRITE    = False
+    AWS_QUERYSTRING_AUTH     = True
+    AWS_S3_SIGNATURE_VERSION = 's3v4'
+    AWS_S3_REGION_NAME       = 'us-east-1'
+
+else:
+    MEDIA_URL  = '/media/'
+    MEDIA_ROOT = BASE_DIR / 'media'
+
+# ── DRF ───────────────────────────────────────────────────────────────────────
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -99,20 +146,20 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ),
-    # Trocar para a paginação do core
     'DEFAULT_PAGINATION_CLASS': 'core.pagination.StandardPagination',
     'PAGE_SIZE': 10,
-    # Adicionar o exception handler do core
     'EXCEPTION_HANDLER': 'core.exceptions.custom_exception_handler',
 }
 
+# ── Simple JWT ────────────────────────────────────────────────────────────────
+
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
+    'ACCESS_TOKEN_LIFETIME':  timedelta(hours=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-    'ROTATE_REFRESH_TOKENS': True,
+    'ROTATE_REFRESH_TOKENS':  True,
     'BLACKLIST_AFTER_ROTATION': True,
-    'ALGORITHM': 'HS256',
-    'SIGNING_KEY': SECRET_KEY,
+    'ALGORITHM':    'HS256',
+    'SIGNING_KEY':  SECRET_KEY,
 }
 
 # ── Logging ───────────────────────────────────────────────────────────────────
