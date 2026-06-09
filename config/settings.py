@@ -9,7 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-ba1nx#5aqw4jc7z-n%%mj*)ik4&3j7q!7o8w-1t0t$@kd9(s)3')
 DEBUG      = config('DEBUG', default=True, cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
+ALLOWED_HOSTS = str(config('ALLOWED_HOSTS', default='*')).split(',')
 
 # ── Apps ──────────────────────────────────────────────────────────────────────
 
@@ -72,7 +72,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME':     config('DB_NAME',     default='estagio'),
         'USER':     config('DB_USER',     default='postgres'),
-        'PASSWORD': config('DB_PASSWORD', default='marco'),
+        'PASSWORD': config('DB_PASSWORD', default='chico'),
         'HOST':     config('DB_HOST',     default='localhost'),
         'PORT':     config('DB_PORT',     default='5432'),
     }
