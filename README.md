@@ -107,5 +107,5 @@ Desenvolvido por João, Chico e Marco.
 qualquer duvida so ver o tutorial no youtube de como fazer setup https://www.youtube.com/watch?v=koRsyjMcJYY
 **
 
-<div class="tenor-gif-embed" data-postid="13004817659900711115" data-share-method="host" data-aspect-ratio="0.781124" data-width="100%"><a href="https://tenor.com/view/epstein-jefrey-jeffrey-epstein-webcamera-gif-13004817659900711115">Epstein Jefrey GIF</a>from <a href="https://tenor.com/search/epstein-gifs">Epstein GIFs</a></div> <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+<img width="292" height="374" alt="epstein-jefrey" src="https://github.com/user-attachments/assets/d64b6728-cbd5-48d0-aa0a-e76020b625d0" />
 
