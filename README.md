@@ -91,4 +91,6 @@ Desenvolvido por João, Chico e Marco.
 qualquer duvida so ver o tutorial no youtube de como fazer setup https://www.youtube.com/watch?v=koRsyjMcJYY
 **
 
-<img width="1024" height="681" alt="WhatsApp Image 2026-06-09 at 16 07 15" src="https://github.com/user-attachments/assets/6a22b173-9971-4ad3-a4ae-fefa31d4c744" />
+<img width="320" height="384" alt="tenor" src="https://github.com/user-attachments/assets/f95fe5e4-1276-469d-b0ee-bc5891e78444" />
+
+
