@@ -72,10 +72,26 @@ http://127.0.0.1:8000/
 ```text
 estagio/
 │
-├── config/             # Configurações principais do Django
-├── manage.py
-├── requirements.txt
-└── README.md
+├── accounts/              # Gestão de utilizadores e autenticação
+├── api_keys/              # Gestão de chaves de API
+├── categories/            # Categorias de produtos/dados
+├── config/                # Configurações principais do Django
+├── core/                  # Funcionalidades centrais da aplicação
+├── datasets/              # Conjuntos de dados utilizados pelo sistema
+├── frontend/              # Interface frontend
+├── logs/                  # Ficheiros de logs
+├── media/                 # Uploads e ficheiros multimédia
+├── venv/                  # Ambiente virtual Python
+│
+├── .env                   # Variáveis de ambiente
+├── .gitignore             # Ficheiros ignorados pelo Git
+├── backup_clean.json      # Backup de dados limpo
+├── backup.json            # Backup de dados
+├── backup.sqlite3         # Base de dados SQLite de backup
+├── docker-compose.yml     # Configuração Docker Compose
+├── manage.py              # Comando principal do Django
+├── README.md              # Documentação do projeto
+└── requirements.txt       # Dependências Python
 ```
 
 ## Funcionalidades
