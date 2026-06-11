@@ -9,13 +9,15 @@ Projeto desenvolvido em Django no âmbito de estágio/projeto académico.
 - SQLite3
 - HTML/CSS
 - Git & GitHub
+- Docker
+- MinIO
 
 ## Instalação
 
 ### 1. Clonar o repositório
 
 ```bash
-git clone https://github.com/chicobanza13/estagio
+git clone https://github.com/Moonphaase/estagio
 cd estagio
 ```
 
