@@ -107,3 +107,6 @@ Desenvolvido por João, Chico e Marco.
 qualquer duvida so ver o tutorial no youtube de como fazer setup https://www.youtube.com/watch?v=koRsyjMcJYY
 **
 
+<img width="320" height="384" alt="tenor" src="https://github.com/user-attachments/assets/f95fe5e4-1276-469d-b0ee-bc5891e78444" />
+
+
