@@ -9,6 +9,8 @@ Projeto desenvolvido em Django no âmbito de estágio/projeto académico.
 - SQLite3
 - HTML/CSS
 - Git & GitHub
+- Docker
+- MinIO
 
 ## Instalação
 
