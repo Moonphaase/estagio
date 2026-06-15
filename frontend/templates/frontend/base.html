@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Dataset Manager{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>[x-cloak] { display: none !important; }</style>
 </head>
 <body class="bg-gray-100 min-h-screen flex">
 
@@ -16,6 +17,7 @@
             <a href="/dashboard/" class="flex items-center gap-2 px-3 py-2 rounded text-sm text-gray-600 hover:bg-gray-100 {% block nav_dashboard %}{% endblock %}">Dashboard</a>
             <a href="/datasets/" class="flex items-center gap-2 px-3 py-2 rounded text-sm text-gray-600 hover:bg-gray-100 {% block nav_datasets %}{% endblock %}">Datasets</a>
             <a href="/categories/" class="flex items-center gap-2 px-3 py-2 rounded text-sm text-gray-600 hover:bg-gray-100 {% block nav_categories %}{% endblock %}">Categorias</a>
+            <a href="/sobre/" class="flex items-center gap-2 px-3 py-2 rounded text-sm text-gray-600 hover:bg-gray-100 {% block nav_sobre %}{% endblock %}">Sobre</a>
             <a href="/profile/" class="flex items-center gap-2 px-3 py-2 rounded text-sm text-gray-600 hover:bg-gray-100 {% block nav_profile %}{% endblock %}">Perfil</a>
             {% if request.user.is_staff %}
             <a href="/users/" class="flex items-center gap-2 px-3 py-2 rounded text-sm text-gray-600 hover:bg-gray-100 {% block nav_users %}{% endblock %}">Utilizadores</a>

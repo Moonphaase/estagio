@@ -749,3 +749,7 @@ def dataset_share_remove(request, id, share_id):
         messages.success(request, 'Partilha removida.')
 
     return redirect('dataset_share', dataset.id)
+
+
+def sobre(request):
+    return render(request, 'frontend/sobre.html')

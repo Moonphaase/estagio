@@ -1,0 +1,58 @@
+{% extends "frontend/base.html" %}
+
+{% block title %}Sobre{% endblock %}
+{% block page_title %}Sobre{% endblock %}
+{% block nav_sobre %}bg-gray-100 font-medium text-gray-900{% endblock %}
+
+{% block content %}
+
+<div class="bg-white rounded-lg border border-gray-200 p-6 mb-4">
+    <h2 class="font-semibold text-gray-800 text-lg mb-2">Dataset Manager</h2>
+    <p class="text-sm text-gray-500 leading-relaxed">
+        O Dataset Manager é uma plataforma web desenvolvida no âmbito de um estágio curricular,
+        com o objetivo de permitir a gestão, organização e partilha de datasets de forma simples e eficiente.
+        A plataforma permite criar datasets, gerir versões, fazer upload de ficheiros e controlar o acesso através de permissões por utilizador.
+    </p>
+</div>
+
+<div class="bg-white rounded-lg border border-gray-200 p-6 mb-4">
+    <h2 class="font-semibold text-gray-800 mb-4">Equipa</h2>
+    <div class="grid grid-cols-3 gap-4">
+        <div class="text-center p-4 border border-gray-100 rounded-lg">
+            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <span class="text-blue-600 font-semibold text-lg">C</span>
+            </div>
+            <p class="text-sm font-medium text-gray-800">Chico</p>
+            <p class="text-xs text-gray-400 mt-1">Desenvolvimento</p>
+        </div>
+        <div class="text-center p-4 border border-gray-100 rounded-lg">
+            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <span class="text-green-600 font-semibold text-lg">J</span>
+            </div>
+            <p class="text-sm font-medium text-gray-800">João</p>
+            <p class="text-xs text-gray-400 mt-1">Desenvolvimento</p>
+        </div>
+        <div class="text-center p-4 border border-gray-100 rounded-lg">
+            <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <span class="text-purple-600 font-semibold text-lg">M</span>
+            </div>
+            <p class="text-sm font-medium text-gray-800">Marco</p>
+            <p class="text-xs text-gray-400 mt-1">Desenvolvimento</p>
+        </div>
+    </div>
+</div>
+
+<div class="bg-white rounded-lg border border-gray-200 p-6">
+    <h2 class="font-semibold text-gray-800 mb-3">Tecnologias utilizadas</h2>
+    <div class="flex flex-wrap gap-2">
+        <span class="text-xs px-3 py-1 rounded-full bg-green-100 text-green-700">Django</span>
+        <span class="text-xs px-3 py-1 rounded-full bg-blue-100 text-blue-700">Django REST Framework</span>
+        <span class="text-xs px-3 py-1 rounded-full bg-purple-100 text-purple-700">PostgreSQL</span>
+        <span class="text-xs px-3 py-1 rounded-full bg-sky-100 text-sky-700">TailwindCSS</span>
+        <span class="text-xs px-3 py-1 rounded-full bg-yellow-100 text-yellow-700">Alpine.js</span>
+        <span class="text-xs px-3 py-1 rounded-full bg-orange-100 text-orange-700">Simple JWT</span>
+        <span class="text-xs px-3 py-1 rounded-full bg-gray-100 text-gray-700">Python 3</span>
+    </div>
+</div>
+
+{% endblock %}
