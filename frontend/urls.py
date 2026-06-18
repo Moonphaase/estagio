@@ -3,7 +3,8 @@ from django.shortcuts import redirect
 from . import views
 
 urlpatterns = [
-    path('', lambda request: redirect('login')),
+    path('', lambda request: redirect('landing'), name='home'),
+    path('landing/', views.landing, name='landing'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('datasets/', views.datasets, name='datasets'),
     path('login/', views.login_view, name='login'),
@@ -34,5 +35,4 @@ urlpatterns = [
     path('datasets/<int:id>/versions/<int:version_id>/download/', views.version_download, name='version_download'),
     path('datasets/<int:id>/comentarios/', views.comment_create, name='comment_create'),
     path('datasets/<int:id>/comentarios/<int:comment_id>/apagar/', views.comment_delete, name='comment_delete'),
-    path('sobre/', views.sobre, name='sobre'),
 ]

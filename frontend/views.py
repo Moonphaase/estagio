@@ -40,7 +40,7 @@ def dashboard(request):
     })
 
 
-@login_required
+
 def datasets(request):
     search            = request.GET.get('search', '').strip()
     category_filter   = request.GET.get('category', '')
@@ -153,7 +153,6 @@ def comment_delete(request, id, comment_id):
     return redirect('dataset_detail', dataset.id)
 
 
-@login_required
 def dataset_detail(request, id):
     dataset   = get_object_or_404(Dataset, id=id)
     has_share = DatasetShare.objects.filter(dataset=dataset, shared_with=request.user).exists()
@@ -750,6 +749,5 @@ def dataset_share_remove(request, id, share_id):
 
     return redirect('dataset_share', dataset.id)
 
-
-def sobre(request):
-    return render(request, 'frontend/sobre.html')
+def landing(request):
+    return render(request, 'frontend/landing.html')

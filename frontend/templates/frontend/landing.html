@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dataset Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center">
+
+    <div class="max-w-2xl w-full mx-auto px-6 py-12 text-center">
+
+        <!-- Logo/Título -->
+        <div class="mb-8">
+            <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7M4 7c0-2 1-3 3-3h10c2 0 3 1 3 3M4 7h16" />
+                </svg>
+            </div>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Dataset Manager</h1>
+            <p class="text-gray-500 text-sm">Projeto de Estágio Curricular</p>
+        </div>
+
+        <!-- Descrição -->
+        <div class="bg-white rounded-2xl border border-gray-200 p-8 mb-6 text-left">
+            <p class="text-gray-600 text-sm leading-relaxed mb-6">
+                O <strong class="text-gray-800">Dataset Manager</strong> é uma plataforma web desenvolvida no âmbito de um estágio curricular,
+                com o objetivo de permitir a gestão, organização e partilha de datasets de forma simples e eficiente.
+            </p>
+
+            <div class="flex flex-wrap gap-2 mb-6">
+                <span class="text-xs px-3 py-1 rounded-full bg-green-100 text-green-700">Django</span>
+                <span class="text-xs px-3 py-1 rounded-full bg-blue-100 text-blue-700">Django REST Framework</span>
+                <span class="text-xs px-3 py-1 rounded-full bg-purple-100 text-purple-700">PostgreSQL</span>
+                <span class="text-xs px-3 py-1 rounded-full bg-sky-100 text-sky-700">TailwindCSS</span>
+                <span class="text-xs px-3 py-1 rounded-full bg-yellow-100 text-yellow-700">Alpine.js</span>
+            </div>
+
+            <div class="border-t border-gray-100 pt-6">
+                <p class="text-xs text-gray-400 mb-3">Desenvolvido por</p>
+                <div class="flex gap-4">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                            <span class="text-blue-600 font-semibold text-sm">C</span>
+                        </div>
+                        <span class="text-sm text-gray-700">Chico</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                            <span class="text-green-600 font-semibold text-sm">J</span>
+                        </div>
+                        <span class="text-sm text-gray-700">João</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                            <span class="text-purple-600 font-semibold text-sm">M</span>
+                        </div>
+                        <span class="text-sm text-gray-700">Marco</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botões -->
+        <div class="flex gap-3 justify-center">
+            <a href="/datasets/" class="bg-blue-600 text-white text-sm px-6 py-2.5 rounded-lg hover:bg-blue-700 transition-colors">
+                Prosseguir para o Dataset Manager →
+            </a>
+            <a href="/login/" class="border border-gray-200 text-gray-600 text-sm px-6 py-2.5 rounded-lg hover:bg-gray-50 transition-colors">
+                Iniciar Sessão
+            </a>
+        </div>
+
+    </div>
+
+</body>
+</html>
