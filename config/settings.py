@@ -219,3 +219,4 @@ if config('DATABASE_URL', default=None):
 if not DEBUG:
     MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
     STATIC_ROOT = BASE_DIR / 'staticfiles'
+    CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='').split(',')
