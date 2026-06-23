@@ -8,6 +8,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from django.db.models import Q
 from django.http import FileResponse, JsonResponse
+from urllib3 import request
 from categories.models import Category
 from datasets.models import Dataset, DatasetVersion, DownloadLog, AuditLog, DatasetFavorite, DatasetShare
 from datasets.audit import audit, audit_dataset_changes
@@ -55,6 +56,7 @@ def datasets(request):
     status_filter     = request.GET.get('status', '')
     favorites_filter  = request.GET.get('favorites', '')
 
+<<<<<<< HEAD
     if request.user.is_authenticated:
         if request.user.is_staff:
             qs = Dataset.objects.all()
@@ -66,6 +68,17 @@ def datasets(request):
         # Guest view: only public datasets
         qs = Dataset.objects.filter(visibility='public')
 
+=======
+    if not request.user.is_authenticated:
+        qs = Dataset.objects.filter(visibility='public', status='published')
+    elif request.user.is_staff:
+        qs = Dataset.objects.all()
+    else:
+        qs = Dataset.objects.filter(
+            Q(visibility='public') | Q(owner=request.user)
+        )
+        
+>>>>>>> ec698867d4f208ba45f3a87099771224944d7c03
     if search:
         qs = qs.filter(Q(name__icontains=search) | Q(description__icontains=search))
     if category_filter:
