@@ -118,6 +118,8 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 USE_S3 = config('USE_S3', default=False, cast=bool)
 
 if USE_S3:
+    # Localmente usa HTTPS (endpoint público Railway)
+    # No Railway usa HTTP (endpoint interno .railway.internal)
     _use_https = config('MINIO_USE_HTTPS', default=False, cast=bool)
     _scheme    = 'https' if _use_https else 'http'
 
@@ -140,7 +142,6 @@ if USE_S3:
     AWS_QUERYSTRING_AUTH     = True
     AWS_S3_SIGNATURE_VERSION = 's3v4'
     AWS_S3_REGION_NAME       = 'us-east-1'
-    
 
 else:
     MEDIA_URL  = '/media/'
