@@ -1,17 +1,17 @@
 from pathlib import Path
 from datetime import timedelta
 from decouple import config
+import dj_database_url
 import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ── Segurança ─────────────────────────────────────────────────────────────────
 
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-ba1nx#5aqw4jc7z-n%%mj*)ik4&3j7q!7o8w-1t0t$@kd9(s)3')
-DEBUG      = config('DEBUG', default=True, cast=bool)
-ALLOWED_HOSTS = str(config('ALLOWED_HOSTS', default='*')).split(',')
+SECRET_KEY           = config('SECRET_KEY', default='django-insecure-ba1nx#5aqw4jc7z-n%%mj*)ik4&3j7q!7o8w-1t0t$@kd9(s)3')
+DEBUG                = config('DEBUG', default=True, cast=bool)
+ALLOWED_HOSTS        = str(config('ALLOWED_HOSTS', default='*')).split(',')
 CSRF_TRUSTED_ORIGINS = str(config('CSRF_TRUSTED_ORIGINS', default='http://localhost')).split(',')
-
 
 # ── Apps ──────────────────────────────────────────────────────────────────────
 
@@ -38,6 +38,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -80,6 +81,12 @@ DATABASES = {
     }
 }
 
+if config('DATABASE_URL', default=None):
+    DATABASES['default'] = dj_database_url.config(
+        default=config('DATABASE_URL'),
+        conn_max_age=600,
+    )
+
 # ── Auth ──────────────────────────────────────────────────────────────────────
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -103,15 +110,16 @@ USE_TZ        = True
 
 # ── Ficheiros estáticos ───────────────────────────────────────────────────────
 
-STATIC_URL = 'static/'
+STATIC_URL  = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # ── Armazenamento (local ou MinIO/S3) ─────────────────────────────────────────
 
 USE_S3 = config('USE_S3', default=False, cast=bool)
 
 if USE_S3:
-    _use_https    = config('MINIO_USE_HTTPS', default=False, cast=bool)
-    _scheme       = 'https' if _use_https else 'http'
+    _use_https = config('MINIO_USE_HTTPS', default=False, cast=bool)
+    _scheme    = 'https' if _use_https else 'http'
 
     STORAGES = {
         "default": {
@@ -207,19 +215,3 @@ LOGGING = {
         },
     },
 }
-
-# ── Produção ──────────────────────────────────────────────────────────────────
-
-import dj_database_url
-
-if config('DATABASE_URL', default=None):
-    DATABASES['default'] = dj_database_url.config(
-        default=config('DATABASE_URL'),
-        conn_max_age=600,
-    )
-
-    CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='').split(',')
-
-if not DEBUG:
-    MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
-    STATIC_ROOT = BASE_DIR / 'staticfiles'
