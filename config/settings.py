@@ -10,6 +10,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-ba1nx#5aqw4jc7z-n%%mj*)ik4&3j7q!7o8w-1t0t$@kd9(s)3')
 DEBUG      = config('DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = str(config('ALLOWED_HOSTS', default='*')).split(',')
+CSRF_TRUSTED_ORIGINS = str(config('CSRF_TRUSTED_ORIGINS', default='http://localhost')).split(',')
+
 
 # ── Apps ──────────────────────────────────────────────────────────────────────
 
