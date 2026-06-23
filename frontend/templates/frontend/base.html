@@ -17,17 +17,23 @@
             <a href="/dashboard/" class="flex items-center gap-2 px-3 py-2 rounded text-sm text-gray-600 hover:bg-gray-100 {% block nav_dashboard %}{% endblock %}">Dashboard</a>
             <a href="/datasets/" class="flex items-center gap-2 px-3 py-2 rounded text-sm text-gray-600 hover:bg-gray-100 {% block nav_datasets %}{% endblock %}">Datasets</a>
             <a href="/categories/" class="flex items-center gap-2 px-3 py-2 rounded text-sm text-gray-600 hover:bg-gray-100 {% block nav_categories %}{% endblock %}">Categorias</a>
-            <a href="/sobre/" class="flex items-center gap-2 px-3 py-2 rounded text-sm text-gray-600 hover:bg-gray-100 {% block nav_sobre %}{% endblock %}">Sobre</a>
+            <a href="/about/" class="flex items-center gap-2 px-3 py-2 rounded text-sm text-gray-600 hover:bg-gray-100 {% block nav_sobre %}{% endblock %}">Sobre</a>
+            {% if request.user.is_authenticated %}
             <a href="/profile/" class="flex items-center gap-2 px-3 py-2 rounded text-sm text-gray-600 hover:bg-gray-100 {% block nav_profile %}{% endblock %}">Perfil</a>
             {% if request.user.is_staff %}
             <a href="/users/" class="flex items-center gap-2 px-3 py-2 rounded text-sm text-gray-600 hover:bg-gray-100 {% block nav_users %}{% endblock %}">Utilizadores</a>
             <a href="/aprovacoes/" class="flex items-center gap-2 px-3 py-2 rounded text-sm text-gray-600 hover:bg-gray-100 {% block nav_aprovacoes %}{% endblock %}">Aprovações</a>
             <a href="/auditoria/" class="flex items-center gap-2 px-3 py-2 rounded text-sm text-gray-600 hover:bg-gray-100 {% block nav_auditoria %}{% endblock %}">Auditoria</a>
             {% endif %}
+            {% endif %}
         </nav>
         <div class="px-5 py-4 border-t border-gray-200 flex items-center justify-between">
-            <span class="text-sm text-gray-500">{{ request.user.username|default:"Utilizador" }}</span>
+            {% if request.user.is_authenticated %}
+            <span class="text-sm text-gray-500">{{ request.user.username }}</span>
             <a href="/logout/" class="text-xs text-red-400 hover:text-red-600">Sair</a>
+            {% else %}
+            <a href="/login/" class="text-xs text-blue-600 hover:text-blue-800">Iniciar Sessão</a>
+            {% endif %}
         </div>
     </aside>
 

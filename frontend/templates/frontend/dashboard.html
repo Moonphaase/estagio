@@ -6,6 +6,14 @@
 
 {% block content %}
 
+{% if is_guest %}
+<div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+    <p class="text-sm text-blue-700">
+        <strong>Modo Visitante:</strong> Está a ver dados públicos. <a href="{% url 'login' %}" class="font-semibold underline hover:text-blue-900">Inicie sessão</a> para criar e gerir os seus próprios datasets.
+    </p>
+</div>
+{% endif %}
+
 <div class="grid grid-cols-4 gap-4 mb-6">
     <div class="bg-white rounded-lg p-4 border border-gray-200">
         <p class="text-xs text-gray-500 mb-1">Total de Datasets</p>
@@ -19,10 +27,12 @@
         <p class="text-xs text-gray-500 mb-1">Categorias</p>
         <p class="text-2xl font-semibold text-gray-800">{{ total_categories }}</p>
     </div>
+    {% if not is_guest %}
     <div class="bg-white rounded-lg p-4 border border-gray-200">
         <p class="text-xs text-gray-500 mb-1">Os meus Datasets</p>
         <p class="text-2xl font-semibold text-gray-800">{{ my_datasets }}</p>
     </div>
+    {% endif %}
 </div>
 
 <div class="bg-white rounded-lg border border-gray-200">

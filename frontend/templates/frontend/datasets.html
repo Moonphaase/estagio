@@ -5,7 +5,9 @@
 {% block nav_datasets %}bg-gray-100 font-medium text-gray-900{% endblock %}
 
 {% block navbar_actions %}
+    {% if not is_guest %}
     <a href="/datasets/create/" class="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700">+ Novo Dataset</a>
+    {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -16,6 +18,14 @@
             {{ message }}
         </div>
     {% endfor %}
+{% endif %}
+
+{% if is_guest %}
+<div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+    <p class="text-sm text-blue-700">
+        <strong>Modo Visitante:</strong> Está a ver apenas datasets públicos. <a href="{% url 'login' %}" class="font-semibold underline hover:text-blue-900">Inicie sessão</a> para criar os seus próprios datasets.
+    </p>
+</div>
 {% endif %}
 
 <!-- Filtros -->
@@ -34,6 +44,7 @@
             {% endfor %}
         </select>
     </div>
+    {% if not is_guest %}
     <div>
         <label class="block text-xs text-gray-500 mb-1">Visibilidade</label>
         <select name="visibility" class="text-sm border border-gray-200 rounded px-3 py-1.5 focus:outline-none focus:border-blue-400">
@@ -61,6 +72,7 @@
             ♥ Guardados
         </a>
     </div>
+    {% endif %}
     
     <div class="flex gap-2">
         <button type="submit" class="text-sm bg-blue-600 text-white px-4 py-1.5 rounded hover:bg-blue-700">Filtrar</button>
