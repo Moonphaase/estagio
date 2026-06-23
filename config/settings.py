@@ -140,6 +140,7 @@ if USE_S3:
     AWS_QUERYSTRING_AUTH     = True
     AWS_S3_SIGNATURE_VERSION = 's3v4'
     AWS_S3_REGION_NAME       = 'us-east-1'
+    AWS_S3_ADDRESSING_STYLE = 'path'
 
 else:
     MEDIA_URL  = '/media/'
