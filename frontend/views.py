@@ -8,7 +8,6 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from django.db.models import Q
 from django.http import FileResponse, JsonResponse
-from urllib3 import request
 from categories.models import Category
 from datasets.models import Dataset, DatasetVersion, DownloadLog, AuditLog, DatasetFavorite, DatasetShare
 from datasets.audit import audit, audit_dataset_changes
@@ -31,7 +30,6 @@ def dashboard(request):
             total_versions  = DatasetVersion.objects.filter(dataset__in=qs).count()
         my_datasets = Dataset.objects.filter(owner=request.user).count()
     else:
-        # Guest view: only public datasets
         recent_datasets = Dataset.objects.filter(visibility='public').order_by('-created_at')[:5]
         total_datasets  = Dataset.objects.filter(visibility='public').count()
         total_versions  = DatasetVersion.objects.filter(dataset__in=Dataset.objects.filter(visibility='public')).count()
@@ -39,14 +37,13 @@ def dashboard(request):
 
     total_categories = Category.objects.count()
     return render(request, 'frontend/dashboard.html', {
-        'recent_datasets': recent_datasets,
-        'total_datasets':  total_datasets,
+        'recent_datasets':  recent_datasets,
+        'total_datasets':   total_datasets,
         'total_categories': total_categories,
-        'total_versions':  total_versions,
-        'my_datasets':     my_datasets,
-        'is_guest':        not request.user.is_authenticated,
+        'total_versions':   total_versions,
+        'my_datasets':      my_datasets,
+        'is_guest':         not request.user.is_authenticated,
     })
-
 
 
 def datasets(request):
@@ -56,20 +53,6 @@ def datasets(request):
     status_filter     = request.GET.get('status', '')
     favorites_filter  = request.GET.get('favorites', '')
 
-<<<<<<< HEAD
-    if request.user.is_authenticated:
-        if request.user.is_staff:
-            qs = Dataset.objects.all()
-        else:
-            qs = Dataset.objects.filter(
-                Q(visibility='public') | Q(owner=request.user)
-            )
-    else:
-        # Guest view: only public datasets
-        qs = Dataset.objects.filter(visibility='public')
-
-=======
->>>>>>> 441abe76b398a7783e3c71c5ab950d18fca326d5
     if not request.user.is_authenticated:
         qs = Dataset.objects.filter(visibility='public', status='published')
     elif request.user.is_staff:
@@ -78,11 +61,7 @@ def datasets(request):
         qs = Dataset.objects.filter(
             Q(visibility='public') | Q(owner=request.user)
         )
-<<<<<<< HEAD
-        
-=======
 
->>>>>>> 441abe76b398a7783e3c71c5ab950d18fca326d5
     if search:
         qs = qs.filter(Q(name__icontains=search) | Q(description__icontains=search))
     if category_filter:
@@ -188,10 +167,10 @@ def dataset_detail(request, id):
     if request.user.is_authenticated:
         has_share = DatasetShare.objects.filter(dataset=dataset, shared_with=request.user).exists()
 
-    if dataset.visibility == 'private' and request.user.is_authenticated and dataset.owner != request.user and not request.user.is_staff and not has_share:
+    if dataset.visibility == 'private' and not request.user.is_authenticated:
         messages.error(request, 'Não tens permissão para ver este dataset.')
         return redirect('datasets')
-    elif dataset.visibility == 'private' and not request.user.is_authenticated:
+    elif dataset.visibility == 'private' and dataset.owner != request.user and not request.user.is_staff and not has_share:
         messages.error(request, 'Não tens permissão para ver este dataset.')
         return redirect('datasets')
 
@@ -598,10 +577,10 @@ def dataset_stats(request, id):
 
     dataset = get_object_or_404(Dataset, id=id)
 
-    if dataset.visibility == 'private' and request.user.is_authenticated and dataset.owner != request.user and not request.user.is_staff:
+    if dataset.visibility == 'private' and not request.user.is_authenticated:
         messages.error(request, 'Não tens permissão para ver este dataset.')
         return redirect('datasets')
-    elif dataset.visibility == 'private' and not request.user.is_authenticated:
+    elif dataset.visibility == 'private' and request.user.is_authenticated and dataset.owner != request.user and not request.user.is_staff:
         messages.error(request, 'Não tens permissão para ver este dataset.')
         return redirect('datasets')
 
@@ -640,7 +619,6 @@ def version_download(request, id, version_id):
     dataset = get_object_or_404(Dataset, id=id)
     version = get_object_or_404(DatasetVersion, id=version_id, dataset=dataset)
 
-    # Permitir apenas downloads de datasets públicos para guests
     if not request.user.is_authenticated and dataset.visibility != 'public':
         messages.error(request, 'Não tens permissão para fazer download deste ficheiro.')
         return redirect('dataset_detail', dataset.id)
@@ -793,12 +771,12 @@ def dataset_share_remove(request, id, share_id):
 
     return redirect('dataset_share', dataset.id)
 
+
 def landing(request):
     return render(request, 'frontend/landing.html')
 
 
 def about(request):
-    """About page accessible to all users (authenticated and guests)."""
     return render(request, 'frontend/about.html', {
         'is_guest': not request.user.is_authenticated,
     })
