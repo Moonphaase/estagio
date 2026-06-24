@@ -44,11 +44,11 @@ class DatasetVersionSerializer(serializers.ModelSerializer):
 
 class DatasetSerializer(serializers.ModelSerializer):
     owner          = serializers.StringRelatedField(read_only=True)
-    metadata       = DatasetMetadataSerializer(read_only=True)
+    metadata       = DatasetMetadataSerializer(required=False)  # <- removido read_only=True
     versions       = DatasetVersionSerializer(many=True, read_only=True)
     version_count  = serializers.SerializerMethodField()
     latest_version = serializers.SerializerMethodField()
-    is_favorited   = serializers.SerializerMethodField()  # ← NOVO
+    is_favorited   = serializers.SerializerMethodField()
 
     class Meta:
         model  = Dataset
@@ -56,7 +56,7 @@ class DatasetSerializer(serializers.ModelSerializer):
             "id", "name", "slug", "description", "category",
             "owner", "visibility", "status", "metadata",
             "versions", "version_count", "latest_version",
-            "is_favorited",  # ← NOVO
+            "is_favorited",
             "created_at", "updated_at",
         ]
         read_only_fields = ["id", "slug", "owner", "created_at", "updated_at"]
@@ -70,11 +70,34 @@ class DatasetSerializer(serializers.ModelSerializer):
             return {"id": latest.id, "version": latest.version}
         return None
 
-    def get_is_favorited(self, obj):  # ← NOVO
+    def get_is_favorited(self, obj):
         request = self.context.get("request")
         if request and request.user.is_authenticated:
             return obj.favorited_by.filter(user=request.user).exists()
         return False
+
+    def create(self, validated_data):
+        metadata_data = validated_data.pop("metadata", None)
+        instance = super().create(validated_data)
+
+        if metadata_data is not None:
+            DatasetMetadata.objects.create(dataset=instance, **metadata_data)
+        else:
+            DatasetMetadata.objects.get_or_create(dataset=instance)
+
+        return instance
+
+    def update(self, instance, validated_data):
+        metadata_data = validated_data.pop("metadata", None)
+        instance = super().update(instance, validated_data)
+
+        if metadata_data is not None:
+            metadata, _ = DatasetMetadata.objects.get_or_create(dataset=instance)
+            for attr, value in metadata_data.items():
+                setattr(metadata, attr, value)
+            metadata.save()
+
+        return instance
 
 
 class DatasetListSerializer(serializers.ModelSerializer):
@@ -82,7 +105,7 @@ class DatasetListSerializer(serializers.ModelSerializer):
     category_name  = serializers.CharField(source="category.name", read_only=True)
     version_count  = serializers.SerializerMethodField()
     latest_version = serializers.SerializerMethodField()
-    is_favorited   = serializers.SerializerMethodField()  # ← NOVO
+    is_favorited   = serializers.SerializerMethodField()
 
     class Meta:
         model  = Dataset
@@ -91,7 +114,7 @@ class DatasetListSerializer(serializers.ModelSerializer):
             "category", "category_name",
             "owner", "visibility", "status",
             "version_count", "latest_version",
-            "is_favorited",  # ← NOVO
+            "is_favorited",
             "created_at", "updated_at",
         ]
         read_only_fields = ["id", "slug", "owner", "created_at", "updated_at"]
@@ -105,14 +128,13 @@ class DatasetListSerializer(serializers.ModelSerializer):
             return {"id": latest.id, "version": latest.version}
         return None
 
-    def get_is_favorited(self, obj):  # ← NOVO
+    def get_is_favorited(self, obj):
         request = self.context.get("request")
         if request and request.user.is_authenticated:
             return obj.favorited_by.filter(user=request.user).exists()
         return False
 
 
-# ← NOVO: fora de qualquer outra classe
 class DatasetFavoriteSerializer(serializers.ModelSerializer):
     dataset_name = serializers.CharField(source="dataset.name", read_only=True)
 
