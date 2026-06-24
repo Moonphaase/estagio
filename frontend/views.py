@@ -9,7 +9,7 @@ from django.contrib import messages
 from django.db.models import Q
 from django.http import FileResponse, JsonResponse
 from categories.models import Category
-from datasets.models import Dataset, DatasetVersion, DownloadLog, AuditLog, DatasetFavorite, DatasetShare
+from datasets.models import Dataset, DatasetVersion, DownloadLog, AuditLog, DatasetFavorite, DatasetShare, DatasetMetadata
 from datasets.audit import audit, audit_dataset_changes
 
 logger = logging.getLogger('accounts')
@@ -245,6 +245,15 @@ def dataset_create(request):
             name=name, description=description, category=category,
             owner=request.user, visibility=visibility, status=status_val
         )
+
+        # Guardar tags
+        tags_raw = request.POST.get('tags', '')
+        tags     = [t.strip() for t in tags_raw.split(',') if t.strip()]
+        if tags:
+            metadata, _ = DatasetMetadata.objects.get_or_create(dataset=dataset)
+            metadata.tags = tags
+            metadata.save()
+
         audit(request, "create", "dataset", dataset.id, f"Dataset '{dataset.name}' criado")
         logger.info(f'Dataset criado: "{dataset.name}" por {request.user.email}')
         messages.success(request, 'Dataset criado com sucesso!')
@@ -299,6 +308,13 @@ def dataset_edit(request, id):
 
         dataset.save()
 
+        # Guardar tags
+        tags_raw = request.POST.get('tags', '')
+        tags     = [t.strip() for t in tags_raw.split(',') if t.strip()]
+        metadata, _ = DatasetMetadata.objects.get_or_create(dataset=dataset)
+        metadata.tags = tags
+        metadata.save()
+
         after = {
             "name":        dataset.name,
             "description": dataset.description,
@@ -312,8 +328,20 @@ def dataset_edit(request, id):
         messages.success(request, 'Dataset atualizado com sucesso!')
         return redirect('dataset_detail', dataset.id)
 
+    # Buscar tags existentes para pré-preencher o formulário
+    tags_list = []
+    tags_str  = ''
+    if hasattr(dataset, 'metadata') and dataset.metadata:
+        tags_list = dataset.metadata.tags or []
+        tags_str  = ', '.join(tags_list)
+
     categories = Category.objects.all()
-    return render(request, 'frontend/dataset_edit.html', {'dataset': dataset, 'categories': categories})
+    return render(request, 'frontend/dataset_edit.html', {
+        'dataset':    dataset,
+        'categories': categories,
+        'tags_list':  tags_list,
+        'tags_str':   tags_str,
+    })
 
 
 def dataset_versions(request, id):
