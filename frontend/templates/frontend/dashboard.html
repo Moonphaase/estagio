@@ -38,7 +38,7 @@
 <div class="bg-white rounded-lg border border-gray-200">
     <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
         <h2 class="text-sm font-semibold text-gray-700">Datasets recentes</h2>
-        <a href="/datasets" class="text-xs text-blue-600 hover:underline">Ver todos</a>
+        <a href="/datasets/" class="text-xs text-blue-600 hover:underline">Ver todos</a>
     </div>
     <table class="w-full text-sm">
         <thead class="bg-gray-50 text-xs text-gray-500">
@@ -54,7 +54,7 @@
     {% for dataset in recent_datasets %}
     <tr class="hover:bg-gray-50">
         <td class="px-4 py-2 font-medium text-gray-800">
-            <a href="/datasets/{{ dataset.id }}" class="hover:text-blue-600">{{ dataset.name }}</a>
+            <a href="/datasets/{{ dataset.id }}/" class="hover:text-blue-600">{{ dataset.name }}</a>
         </td>
         <td class="px-4 py-2 text-gray-500">{{ dataset.category|default:"—" }}</td>
         <td class="px-4 py-2">
