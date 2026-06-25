@@ -104,9 +104,6 @@ estagio/
 ## Autor
 
 Desenvolvido por João, Chico e Marco.
-qualquer duvida so ver o tutorial no youtube de como fazer setup https://www.youtube.com/watch?v=koRsyjMcJYY
-**
 
-<img width="960" height="640" alt="bonnie" src="https://github.com/user-attachments/assets/76e30f65-8b41-4f09-b9c6-169d4fd239cf" />
 
 
