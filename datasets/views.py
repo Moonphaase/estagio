@@ -48,19 +48,17 @@ class DatasetViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
-            return [permissions.IsAuthenticatedOrReadOnly()]
+            return [permissions.IsAuthenticated()]
         return [permissions.IsAuthenticated(), IsOwnerOrAdmin()]
 
     def get_queryset(self):
         qs   = super().get_queryset()
         user = self.request.user
 
-        if user.is_authenticated and user.is_staff:
+        if user.is_staff:
             pass
-        elif user.is_authenticated:
-            qs = qs.filter(Q(visibility="public") | Q(owner=user))
         else:
-            qs = qs.filter(visibility="public", status="published")
+            qs = qs.filter(Q(visibility="public") | Q(owner=user))
 
         category   = self.request.query_params.get("category")
         owner      = self.request.query_params.get("owner")
@@ -141,7 +139,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
         return response
 
     @action(detail=True, methods=["get"], url_path="stats",
-            permission_classes=[permissions.IsAuthenticatedOrReadOnly])
+            permission_classes=[IsAuthenticated])
     def stats(self, request, pk=None):
         dataset = self.get_object()
         now     = timezone.now()
