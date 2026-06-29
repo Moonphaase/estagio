@@ -15,20 +15,30 @@ from datasets.audit import audit, audit_dataset_changes
 logger = logging.getLogger('accounts')
 
 
-@login_required
 def dashboard(request):
-    if request.user.is_staff:
-        recent_datasets = Dataset.objects.all().order_by('-created_at')[:5]
-        total_datasets  = Dataset.objects.count()
-        total_versions  = DatasetVersion.objects.count()
+    # Alterado: Removido @login_required para permitir acesso público controlado
+    if request.user.is_authenticated:
+        is_guest = False
+        if request.user.is_staff:
+            recent_datasets = Dataset.objects.all().order_by('-created_at')[:5]
+            total_datasets  = Dataset.objects.count()
+            total_versions  = DatasetVersion.objects.count()
+        else:
+            qs = Dataset.objects.filter(
+                Q(visibility='public') | Q(owner=request.user)
+            )
+            recent_datasets = qs.order_by('-created_at')[:5]
+            total_datasets  = qs.count()
+            total_versions  = DatasetVersion.objects.filter(dataset__in=qs).count()
+        my_datasets = Dataset.objects.filter(owner=request.user).count()
     else:
-        qs = Dataset.objects.filter(
-            Q(visibility='public') | Q(owner=request.user)
-        )
+        # Visitante não logado: Vê apenas dados públicos
+        is_guest = True
+        qs = Dataset.objects.filter(visibility='public')
         recent_datasets = qs.order_by('-created_at')[:5]
         total_datasets  = qs.count()
         total_versions  = DatasetVersion.objects.filter(dataset__in=qs).count()
-    my_datasets = Dataset.objects.filter(owner=request.user).count()
+        my_datasets = 0
 
     total_categories = Category.objects.count()
     return render(request, 'frontend/dashboard.html', {
@@ -37,24 +47,29 @@ def dashboard(request):
         'total_categories': total_categories,
         'total_versions':   total_versions,
         'my_datasets':      my_datasets,
-        'is_guest':         False,
+        'is_guest':         is_guest,
     })
 
 
-@login_required
 def datasets(request):
+    # Alterado: Removido @login_required para permitir visualização pública
     search            = request.GET.get('search', '').strip()
     category_filter   = request.GET.get('category', '')
     visibility_filter = request.GET.get('visibility', '')
     status_filter     = request.GET.get('status', '')
     favorites_filter  = request.GET.get('favorites', '')
 
-    if request.user.is_staff:
-        qs = Dataset.objects.all()
+    if request.user.is_authenticated:
+        is_guest = False
+        if request.user.is_staff:
+            qs = Dataset.objects.all()
+        else:
+            qs = Dataset.objects.filter(
+                Q(visibility='public') | Q(owner=request.user)
+            )
     else:
-        qs = Dataset.objects.filter(
-            Q(visibility='public') | Q(owner=request.user)
-        )
+        is_guest = True
+        qs = Dataset.objects.filter(visibility='public')
 
     if search:
         qs = qs.filter(Q(name__icontains=search) | Q(description__icontains=search))
@@ -64,11 +79,15 @@ def datasets(request):
         qs = qs.filter(visibility=visibility_filter)
     if status_filter:
         qs = qs.filter(status=status_filter)
+        
     if favorites_filter:
-        favorited_ids = DatasetFavorite.objects.filter(
-            user=request.user
-        ).values_list('dataset_id', flat=True)
-        qs = qs.filter(id__in=favorited_ids)
+        if request.user.is_authenticated:
+            favorited_ids = DatasetFavorite.objects.filter(
+                user=request.user
+            ).values_list('dataset_id', flat=True)
+            qs = qs.filter(id__in=favorited_ids)
+        else:
+            qs = qs.none()
 
     qs         = qs.order_by('-created_at')
     categories = Category.objects.all()
@@ -80,7 +99,7 @@ def datasets(request):
         'visibility_filter': visibility_filter,
         'status_filter':     status_filter,
         'favorites_filter':  favorites_filter,
-        'is_guest':          False,
+        'is_guest':          is_guest,
     })
 
 
@@ -100,8 +119,6 @@ def login_view(request):
 
 
 def register_view(request):
-    # Alterado: Removido @login_required e a verificação is_staff para tornar o registo público
-
     if request.method == 'POST':
         username = request.POST.get('username')
         email    = request.POST.get('email')
@@ -115,10 +132,7 @@ def register_view(request):
         if User.objects.filter(email=email).exists():
             return render(request, 'frontend/register.html', {'error': 'Email já está registado'})
 
-        # Cria o utilizador na BD
         user = User.objects.create_user(username=username, email=email, password=password)
-        
-        # Alterado: Define a conta como inativa para ir para aprovação do administrador
         user.is_active = False
         user.save()
         
@@ -158,18 +172,29 @@ def comment_delete(request, id, comment_id):
     return redirect('dataset_detail', dataset.id)
 
 
-@login_required
 def dataset_detail(request, id):
-    dataset   = get_object_or_404(Dataset, id=id)
-    has_share = DatasetShare.objects.filter(dataset=dataset, shared_with=request.user).exists()
+    # Alterado: Removido @login_required para permitir detalhe de datasets públicos
+    dataset = get_object_or_404(Dataset, id=id)
+    
+    if request.user.is_authenticated:
+        is_guest = False
+        has_share = DatasetShare.objects.filter(dataset=dataset, shared_with=request.user).exists()
+        is_owner = dataset.owner == request.user
+        is_favorited = DatasetFavorite.objects.filter(user=request.user, dataset=dataset).exists()
 
-    if dataset.visibility == 'private' and dataset.owner != request.user and not request.user.is_staff and not has_share:
-        messages.error(request, 'Não tens permissão para ver este dataset.')
-        return redirect('datasets')
+        if dataset.visibility == 'private' and dataset.owner != request.user and not request.user.is_staff and not has_share:
+            messages.error(request, 'Não tens permissão para ver este dataset.')
+            return redirect('datasets')
+    else:
+        # Se for visitante e o dataset for privado, barra o acesso
+        is_guest = True
+        is_owner = False
+        is_favorited = False
+        if dataset.visibility == 'private':
+            messages.error(request, 'Este dataset é privado. Inicie sessão para tentar aceder.')
+            return redirect('login')
 
-    versions     = DatasetVersion.objects.filter(dataset=dataset).order_by('-created_at')
-    is_owner     = dataset.owner == request.user
-    is_favorited = DatasetFavorite.objects.filter(user=request.user, dataset=dataset).exists()
+    versions = DatasetVersion.objects.filter(dataset=dataset).order_by('-created_at')
 
     from datasets.models import Comment
     comments = Comment.objects.filter(dataset=dataset).select_related('author').order_by('created_at')
@@ -204,7 +229,7 @@ def dataset_detail(request, id):
         'comments':     comments,
         'csv_headers':  csv_headers,
         'csv_rows':     csv_rows,
-        'is_guest':     False,
+        'is_guest':     is_guest,
     })
 
 
@@ -255,8 +280,8 @@ def dataset_create(request):
     return render(request, 'frontend/dataset_create.html', {'categories': categories})
 
 
-@login_required
 def categories(request):
+    # Alterado: Removido @login_required para permitir visualização pública das categorias
     search = request.GET.get('search', '').strip()
     qs     = Category.objects.all()
     if search:
@@ -264,7 +289,7 @@ def categories(request):
     return render(request, 'frontend/categories.html', {
         'categories': qs,
         'search':     search,
-        'is_guest':   False,
+        'is_guest':   not request.user.is_authenticated,
     })
 
 

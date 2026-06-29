@@ -3,9 +3,10 @@ from django.shortcuts import redirect
 from . import views
 
 urlpatterns = [
-    path('', lambda request: redirect('landing'), name='home'),
+    # Alterado: A página inicial agora carrega diretamente o Dashboard
+    path('', views.dashboard, name='dashboard'),
+    
     path('landing/', views.landing, name='landing'),
-    path('dashboard/', views.dashboard, name='dashboard'),
     path('about/', views.about, name='about'),
     path('datasets/', views.datasets, name='datasets'),
     path('login/', views.login_view, name='login'),
