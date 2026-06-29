@@ -15,25 +15,20 @@ from datasets.audit import audit, audit_dataset_changes
 logger = logging.getLogger('accounts')
 
 
+@login_required
 def dashboard(request):
-    if request.user.is_authenticated:
-        if request.user.is_staff:
-            recent_datasets = Dataset.objects.all().order_by('-created_at')[:5]
-            total_datasets  = Dataset.objects.count()
-            total_versions  = DatasetVersion.objects.count()
-        else:
-            qs = Dataset.objects.filter(
-                Q(visibility='public') | Q(owner=request.user)
-            )
-            recent_datasets = qs.order_by('-created_at')[:5]
-            total_datasets  = qs.count()
-            total_versions  = DatasetVersion.objects.filter(dataset__in=qs).count()
-        my_datasets = Dataset.objects.filter(owner=request.user).count()
+    if request.user.is_staff:
+        recent_datasets = Dataset.objects.all().order_by('-created_at')[:5]
+        total_datasets  = Dataset.objects.count()
+        total_versions  = DatasetVersion.objects.count()
     else:
-        recent_datasets = Dataset.objects.filter(visibility='public').order_by('-created_at')[:5]
-        total_datasets  = Dataset.objects.filter(visibility='public').count()
-        total_versions  = DatasetVersion.objects.filter(dataset__in=Dataset.objects.filter(visibility='public')).count()
-        my_datasets     = 0
+        qs = Dataset.objects.filter(
+            Q(visibility='public') | Q(owner=request.user)
+        )
+        recent_datasets = qs.order_by('-created_at')[:5]
+        total_datasets  = qs.count()
+        total_versions  = DatasetVersion.objects.filter(dataset__in=qs).count()
+    my_datasets = Dataset.objects.filter(owner=request.user).count()
 
     total_categories = Category.objects.count()
     return render(request, 'frontend/dashboard.html', {
@@ -42,10 +37,11 @@ def dashboard(request):
         'total_categories': total_categories,
         'total_versions':   total_versions,
         'my_datasets':      my_datasets,
-        'is_guest':         not request.user.is_authenticated,
+        'is_guest':         False,
     })
 
 
+@login_required
 def datasets(request):
     search            = request.GET.get('search', '').strip()
     category_filter   = request.GET.get('category', '')
@@ -53,9 +49,7 @@ def datasets(request):
     status_filter     = request.GET.get('status', '')
     favorites_filter  = request.GET.get('favorites', '')
 
-    if not request.user.is_authenticated:
-        qs = Dataset.objects.filter(visibility='public', status='published')
-    elif request.user.is_staff:
+    if request.user.is_staff:
         qs = Dataset.objects.all()
     else:
         qs = Dataset.objects.filter(
@@ -66,11 +60,11 @@ def datasets(request):
         qs = qs.filter(Q(name__icontains=search) | Q(description__icontains=search))
     if category_filter:
         qs = qs.filter(category__slug=category_filter)
-    if visibility_filter and request.user.is_authenticated:
+    if visibility_filter:
         qs = qs.filter(visibility=visibility_filter)
-    if status_filter and request.user.is_authenticated:
+    if status_filter:
         qs = qs.filter(status=status_filter)
-    if favorites_filter and request.user.is_authenticated:
+    if favorites_filter:
         favorited_ids = DatasetFavorite.objects.filter(
             user=request.user
         ).values_list('dataset_id', flat=True)
@@ -86,7 +80,7 @@ def datasets(request):
         'visibility_filter': visibility_filter,
         'status_filter':     status_filter,
         'favorites_filter':  favorites_filter,
-        'is_guest':          not request.user.is_authenticated,
+        'is_guest':          False,
     })
 
 
@@ -161,22 +155,18 @@ def comment_delete(request, id, comment_id):
     return redirect('dataset_detail', dataset.id)
 
 
+@login_required
 def dataset_detail(request, id):
     dataset   = get_object_or_404(Dataset, id=id)
-    has_share = False
-    if request.user.is_authenticated:
-        has_share = DatasetShare.objects.filter(dataset=dataset, shared_with=request.user).exists()
+    has_share = DatasetShare.objects.filter(dataset=dataset, shared_with=request.user).exists()
 
-    if dataset.visibility == 'private' and not request.user.is_authenticated:
-        messages.error(request, 'Não tens permissão para ver este dataset.')
-        return redirect('datasets')
-    elif dataset.visibility == 'private' and dataset.owner != request.user and not request.user.is_staff and not has_share:
+    if dataset.visibility == 'private' and dataset.owner != request.user and not request.user.is_staff and not has_share:
         messages.error(request, 'Não tens permissão para ver este dataset.')
         return redirect('datasets')
 
     versions     = DatasetVersion.objects.filter(dataset=dataset).order_by('-created_at')
-    is_owner     = request.user.is_authenticated and dataset.owner == request.user
-    is_favorited = request.user.is_authenticated and DatasetFavorite.objects.filter(user=request.user, dataset=dataset).exists()
+    is_owner     = dataset.owner == request.user
+    is_favorited = DatasetFavorite.objects.filter(user=request.user, dataset=dataset).exists()
 
     from datasets.models import Comment
     comments = Comment.objects.filter(dataset=dataset).select_related('author').order_by('created_at')
@@ -211,7 +201,7 @@ def dataset_detail(request, id):
         'comments':     comments,
         'csv_headers':  csv_headers,
         'csv_rows':     csv_rows,
-        'is_guest':     not request.user.is_authenticated,
+        'is_guest':     False,
     })
 
 
@@ -246,7 +236,6 @@ def dataset_create(request):
             owner=request.user, visibility=visibility, status=status_val
         )
 
-        # Guardar tags
         tags_raw = request.POST.get('tags', '')
         tags     = [t.strip() for t in tags_raw.split(',') if t.strip()]
         if tags:
@@ -263,6 +252,7 @@ def dataset_create(request):
     return render(request, 'frontend/dataset_create.html', {'categories': categories})
 
 
+@login_required
 def categories(request):
     search = request.GET.get('search', '').strip()
     qs     = Category.objects.all()
@@ -271,7 +261,7 @@ def categories(request):
     return render(request, 'frontend/categories.html', {
         'categories': qs,
         'search':     search,
-        'is_guest':   not request.user.is_authenticated,
+        'is_guest':   False,
     })
 
 
@@ -308,7 +298,6 @@ def dataset_edit(request, id):
 
         dataset.save()
 
-        # Guardar tags
         tags_raw = request.POST.get('tags', '')
         tags     = [t.strip() for t in tags_raw.split(',') if t.strip()]
         metadata, _ = DatasetMetadata.objects.get_or_create(dataset=dataset)
@@ -328,7 +317,6 @@ def dataset_edit(request, id):
         messages.success(request, 'Dataset atualizado com sucesso!')
         return redirect('dataset_detail', dataset.id)
 
-    # Buscar tags existentes para pré-preencher o formulário
     tags_list = []
     tags_str  = ''
     if hasattr(dataset, 'metadata') and dataset.metadata:
@@ -344,18 +332,16 @@ def dataset_edit(request, id):
     })
 
 
+@login_required
 def dataset_versions(request, id):
     dataset = get_object_or_404(Dataset, id=id)
 
-    if dataset.visibility == 'private' and not request.user.is_authenticated:
-        messages.error(request, 'Não tens permissão para ver este dataset.')
-        return redirect('datasets')
-    elif dataset.visibility == 'private' and request.user.is_authenticated and dataset.owner != request.user and not request.user.is_staff:
+    if dataset.visibility == 'private' and dataset.owner != request.user and not request.user.is_staff:
         messages.error(request, 'Não tens permissão para ver este dataset.')
         return redirect('datasets')
 
     versions = DatasetVersion.objects.filter(dataset=dataset).order_by('-created_at')
-    is_owner = request.user.is_authenticated and dataset.owner == request.user
+    is_owner = dataset.owner == request.user
     return render(request, 'frontend/dataset_versions.html', {
         'dataset':  dataset,
         'versions': versions,
@@ -598,6 +584,7 @@ def version_delete(request, id, version_id):
     return redirect('dataset_versions', dataset.id)
 
 
+@login_required
 def dataset_stats(request, id):
     from django.db.models import Count
     from django.utils import timezone
@@ -605,10 +592,7 @@ def dataset_stats(request, id):
 
     dataset = get_object_or_404(Dataset, id=id)
 
-    if dataset.visibility == 'private' and not request.user.is_authenticated:
-        messages.error(request, 'Não tens permissão para ver este dataset.')
-        return redirect('datasets')
-    elif dataset.visibility == 'private' and request.user.is_authenticated and dataset.owner != request.user and not request.user.is_staff:
+    if dataset.visibility == 'private' and dataset.owner != request.user and not request.user.is_staff:
         messages.error(request, 'Não tens permissão para ver este dataset.')
         return redirect('datasets')
 
@@ -639,17 +623,14 @@ def dataset_stats(request, id):
         'downloads_30_days': downloads_30_days,
         'by_version':        by_version,
         'recent_logs':       recent_logs,
-        'is_guest':          not request.user.is_authenticated,
+        'is_guest':          False,
     })
 
 
+@login_required
 def version_download(request, id, version_id):
     dataset = get_object_or_404(Dataset, id=id)
     version = get_object_or_404(DatasetVersion, id=version_id, dataset=dataset)
-
-    if not request.user.is_authenticated and dataset.visibility != 'public':
-        messages.error(request, 'Não tens permissão para fazer download deste ficheiro.')
-        return redirect('dataset_detail', dataset.id)
 
     if not version.file:
         messages.error(request, 'Ficheiro não encontrado.')
@@ -664,7 +645,7 @@ def version_download(request, id, version_id):
     DownloadLog.objects.create(
         dataset=dataset,
         version=version,
-        user=request.user if request.user.is_authenticated else None,
+        user=request.user,
         ip_address=request.META.get('REMOTE_ADDR'),
     )
 
