@@ -8,6 +8,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from django.db.models import Q
 from django.http import FileResponse, JsonResponse
+from django.utils import timezone
 from categories.models import Category
 from datasets.models import Dataset, DatasetVersion, DownloadLog, AuditLog, DatasetFavorite, DatasetShare, DatasetMetadata
 from datasets.audit import audit, audit_dataset_changes
@@ -15,20 +16,25 @@ from datasets.audit import audit, audit_dataset_changes
 logger = logging.getLogger('accounts')
 
 
-@login_required
 def dashboard(request):
-    if request.user.is_staff:
-        recent_datasets = Dataset.objects.all().order_by('-created_at')[:5]
-        total_datasets  = Dataset.objects.count()
-        total_versions  = DatasetVersion.objects.count()
+    if request.user.is_authenticated:
+        if request.user.is_staff:
+            recent_datasets = Dataset.objects.all().order_by('-created_at')[:5]
+            total_datasets  = Dataset.objects.count()
+            total_versions  = DatasetVersion.objects.count()
+        else:
+            qs = Dataset.objects.filter(
+                Q(visibility='public') | Q(owner=request.user)
+            )
+            recent_datasets = qs.order_by('-created_at')[:5]
+            total_datasets  = qs.count()
+            total_versions  = DatasetVersion.objects.filter(dataset__in=qs).count()
+        my_datasets = Dataset.objects.filter(owner=request.user).count()
     else:
-        qs = Dataset.objects.filter(
-            Q(visibility='public') | Q(owner=request.user)
-        )
-        recent_datasets = qs.order_by('-created_at')[:5]
-        total_datasets  = qs.count()
-        total_versions  = DatasetVersion.objects.filter(dataset__in=qs).count()
-    my_datasets = Dataset.objects.filter(owner=request.user).count()
+        recent_datasets = Dataset.objects.filter(visibility='public').order_by('-created_at')[:5]
+        total_datasets  = Dataset.objects.filter(visibility='public').count()
+        total_versions  = DatasetVersion.objects.filter(dataset__in=Dataset.objects.filter(visibility='public')).count()
+        my_datasets     = 0
 
     total_categories = Category.objects.count()
     return render(request, 'frontend/dashboard.html', {
@@ -37,11 +43,10 @@ def dashboard(request):
         'total_categories': total_categories,
         'total_versions':   total_versions,
         'my_datasets':      my_datasets,
-        'is_guest':         False,
+        'is_guest':         not request.user.is_authenticated,
     })
 
 
-@login_required
 def datasets(request):
     search            = request.GET.get('search', '').strip()
     category_filter   = request.GET.get('category', '')
@@ -49,7 +54,9 @@ def datasets(request):
     status_filter     = request.GET.get('status', '')
     favorites_filter  = request.GET.get('favorites', '')
 
-    if request.user.is_staff:
+    if not request.user.is_authenticated:
+        qs = Dataset.objects.filter(visibility='public', status='published')
+    elif request.user.is_staff:
         qs = Dataset.objects.all()
     else:
         qs = Dataset.objects.filter(
@@ -60,11 +67,11 @@ def datasets(request):
         qs = qs.filter(Q(name__icontains=search) | Q(description__icontains=search))
     if category_filter:
         qs = qs.filter(category__slug=category_filter)
-    if visibility_filter:
+    if visibility_filter and request.user.is_authenticated:
         qs = qs.filter(visibility=visibility_filter)
-    if status_filter:
+    if status_filter and request.user.is_authenticated:
         qs = qs.filter(status=status_filter)
-    if favorites_filter:
+    if favorites_filter and request.user.is_authenticated:
         favorited_ids = DatasetFavorite.objects.filter(
             user=request.user
         ).values_list('dataset_id', flat=True)
@@ -80,7 +87,7 @@ def datasets(request):
         'visibility_filter': visibility_filter,
         'status_filter':     status_filter,
         'favorites_filter':  favorites_filter,
-        'is_guest':          False,
+        'is_guest':          not request.user.is_authenticated,
     })
 
 
@@ -94,36 +101,115 @@ def login_view(request):
             logger.info(f'Login: {email}')
             return redirect('dashboard')
         else:
+            # Verificar se existe mas está pendente
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            try:
+                u = User.objects.get(email=email)
+                if not u.is_active:
+                    return render(request, 'frontend/login.html', {
+                        'error': 'A tua conta está a aguardar aprovação do administrador.'
+                    })
+            except User.DoesNotExist:
+                pass
             logger.warning(f'Login falhado: {email}')
             return render(request, 'frontend/login.html', {'error': 'Email ou password incorretos'})
     return render(request, 'frontend/login.html')
 
 
-@login_required
 def register_view(request):
-    if not request.user.is_staff:
-        messages.error(request, 'Apenas administradores podem registar novos utilizadores.')
-        return redirect('dashboard')
-
     if request.method == 'POST':
-        username = request.POST.get('username')
-        email    = request.POST.get('email')
-        password = request.POST.get('password')
+        username = request.POST.get('username', '').strip()
+        email    = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '')
 
         from django.contrib.auth import get_user_model
+        from accounts.models import RegistrationRequest
         User = get_user_model()
 
         if User.objects.filter(username=username).exists():
-            return render(request, 'frontend/register.html', {'error': 'Nome de utilizador já existe'})
+            return render(request, 'frontend/register.html', {'error': 'Nome de utilizador já existe.'})
         if User.objects.filter(email=email).exists():
-            return render(request, 'frontend/register.html', {'error': 'Email já está registado'})
+            return render(request, 'frontend/register.html', {'error': 'Email já está registado.'})
+        if len(password) < 6:
+            return render(request, 'frontend/register.html', {'error': 'A password deve ter pelo menos 6 caracteres.'})
 
-        User.objects.create_user(username=username, email=email, password=password)
-        logger.info(f'Utilizador criado: {email} por {request.user.email}')
-        messages.success(request, 'Utilizador criado com sucesso!')
-        return redirect('users')
+        # Criar utilizador inativo
+        user = User.objects.create_user(
+            username=username, email=email, password=password, is_active=False
+        )
+        # Criar pedido de registo
+        RegistrationRequest.objects.create(user=user)
+
+        logger.info(f'Pedido de registo: {email}')
+        return redirect('register_pending')
 
     return render(request, 'frontend/register.html')
+
+
+def register_pending(request):
+    return render(request, 'frontend/register_pending.html')
+
+
+@login_required
+def registration_requests(request):
+    if not request.user.is_staff:
+        messages.error(request, 'Não tens permissão para ver esta página.')
+        return redirect('dashboard')
+
+    from accounts.models import RegistrationRequest
+    pending  = RegistrationRequest.objects.filter(status='pending').select_related('user')
+    reviewed = RegistrationRequest.objects.exclude(status='pending').select_related('user', 'reviewed_by').order_by('-reviewed_at')[:20]
+    return render(request, 'frontend/registration_requests.html', {
+        'pending':  pending,
+        'reviewed': reviewed,
+    })
+
+
+@login_required
+def registration_approve(request, request_id):
+    if not request.user.is_staff:
+        messages.error(request, 'Não tens permissão.')
+        return redirect('dashboard')
+
+    from accounts.models import RegistrationRequest
+    reg = get_object_or_404(RegistrationRequest, id=request_id)
+
+    if request.method == 'POST':
+        reg.user.is_active = True
+        reg.user.save()
+        reg.status      = RegistrationRequest.Status.APPROVED
+        reg.reviewed_at = timezone.now()
+        reg.reviewed_by = request.user
+        reg.save()
+        logger.info(f'Registo aprovado: {reg.user.email} por {request.user.email}')
+        messages.success(request, f'Conta de {reg.user.email} aprovada.')
+
+    return redirect('registration_requests')
+
+
+@login_required
+def registration_reject(request, request_id):
+    if not request.user.is_staff:
+        messages.error(request, 'Não tens permissão.')
+        return redirect('dashboard')
+
+    from accounts.models import RegistrationRequest
+    reg = get_object_or_404(RegistrationRequest, id=request_id)
+
+    if request.method == 'POST':
+        motivo = request.POST.get('motivo', '')
+        reg.user.delete()  # apaga o utilizador inativo
+        reg.status          = RegistrationRequest.Status.REJECTED
+        reg.reviewed_at     = timezone.now()
+        reg.reviewed_by     = request.user
+        reg.motivo_rejeicao = motivo
+        # não podemos fazer reg.save() porque o user foi apagado (CASCADE)
+        # então guardamos o log apenas
+        logger.info(f'Registo rejeitado: {reg.user.email if reg.user_id else "?"} por {request.user.email}. Motivo: {motivo}')
+        messages.warning(request, 'Pedido de registo rejeitado.')
+
+    return redirect('registration_requests')
 
 
 @login_required
@@ -155,18 +241,22 @@ def comment_delete(request, id, comment_id):
     return redirect('dataset_detail', dataset.id)
 
 
-@login_required
 def dataset_detail(request, id):
     dataset   = get_object_or_404(Dataset, id=id)
-    has_share = DatasetShare.objects.filter(dataset=dataset, shared_with=request.user).exists()
+    has_share = False
+    if request.user.is_authenticated:
+        has_share = DatasetShare.objects.filter(dataset=dataset, shared_with=request.user).exists()
 
-    if dataset.visibility == 'private' and dataset.owner != request.user and not request.user.is_staff and not has_share:
+    if dataset.visibility == 'private' and not request.user.is_authenticated:
+        messages.error(request, 'Não tens permissão para ver este dataset.')
+        return redirect('datasets')
+    elif dataset.visibility == 'private' and dataset.owner != request.user and not request.user.is_staff and not has_share:
         messages.error(request, 'Não tens permissão para ver este dataset.')
         return redirect('datasets')
 
     versions     = DatasetVersion.objects.filter(dataset=dataset).order_by('-created_at')
-    is_owner     = dataset.owner == request.user
-    is_favorited = DatasetFavorite.objects.filter(user=request.user, dataset=dataset).exists()
+    is_owner     = request.user.is_authenticated and dataset.owner == request.user
+    is_favorited = request.user.is_authenticated and DatasetFavorite.objects.filter(user=request.user, dataset=dataset).exists()
 
     from datasets.models import Comment
     comments = Comment.objects.filter(dataset=dataset).select_related('author').order_by('created_at')
@@ -201,7 +291,7 @@ def dataset_detail(request, id):
         'comments':     comments,
         'csv_headers':  csv_headers,
         'csv_rows':     csv_rows,
-        'is_guest':     False,
+        'is_guest':     not request.user.is_authenticated,
     })
 
 
@@ -236,6 +326,7 @@ def dataset_create(request):
             owner=request.user, visibility=visibility, status=status_val
         )
 
+        # Guardar tags
         tags_raw = request.POST.get('tags', '')
         tags     = [t.strip() for t in tags_raw.split(',') if t.strip()]
         if tags:
@@ -252,7 +343,6 @@ def dataset_create(request):
     return render(request, 'frontend/dataset_create.html', {'categories': categories})
 
 
-@login_required
 def categories(request):
     search = request.GET.get('search', '').strip()
     qs     = Category.objects.all()
@@ -261,7 +351,7 @@ def categories(request):
     return render(request, 'frontend/categories.html', {
         'categories': qs,
         'search':     search,
-        'is_guest':   False,
+        'is_guest':   not request.user.is_authenticated,
     })
 
 
@@ -298,6 +388,7 @@ def dataset_edit(request, id):
 
         dataset.save()
 
+        # Guardar tags
         tags_raw = request.POST.get('tags', '')
         tags     = [t.strip() for t in tags_raw.split(',') if t.strip()]
         metadata, _ = DatasetMetadata.objects.get_or_create(dataset=dataset)
@@ -317,6 +408,7 @@ def dataset_edit(request, id):
         messages.success(request, 'Dataset atualizado com sucesso!')
         return redirect('dataset_detail', dataset.id)
 
+    # Buscar tags existentes
     tags_list = []
     tags_str  = ''
     if hasattr(dataset, 'metadata') and dataset.metadata:
@@ -332,16 +424,18 @@ def dataset_edit(request, id):
     })
 
 
-@login_required
 def dataset_versions(request, id):
     dataset = get_object_or_404(Dataset, id=id)
 
-    if dataset.visibility == 'private' and dataset.owner != request.user and not request.user.is_staff:
+    if dataset.visibility == 'private' and not request.user.is_authenticated:
+        messages.error(request, 'Não tens permissão para ver este dataset.')
+        return redirect('datasets')
+    elif dataset.visibility == 'private' and request.user.is_authenticated and dataset.owner != request.user and not request.user.is_staff:
         messages.error(request, 'Não tens permissão para ver este dataset.')
         return redirect('datasets')
 
     versions = DatasetVersion.objects.filter(dataset=dataset).order_by('-created_at')
-    is_owner = dataset.owner == request.user
+    is_owner = request.user.is_authenticated and dataset.owner == request.user
     return render(request, 'frontend/dataset_versions.html', {
         'dataset':  dataset,
         'versions': versions,
@@ -584,18 +678,19 @@ def version_delete(request, id, version_id):
     return redirect('dataset_versions', dataset.id)
 
 
-@login_required
 def dataset_stats(request, id):
     from django.db.models import Count
-    from django.utils import timezone
-    from datetime import timedelta
 
     dataset = get_object_or_404(Dataset, id=id)
 
-    if dataset.visibility == 'private' and dataset.owner != request.user and not request.user.is_staff:
+    if dataset.visibility == 'private' and not request.user.is_authenticated:
+        messages.error(request, 'Não tens permissão para ver este dataset.')
+        return redirect('datasets')
+    elif dataset.visibility == 'private' and request.user.is_authenticated and dataset.owner != request.user and not request.user.is_staff:
         messages.error(request, 'Não tens permissão para ver este dataset.')
         return redirect('datasets')
 
+    from datetime import timedelta
     now               = timezone.now()
     total_downloads   = DownloadLog.objects.filter(dataset=dataset).count()
     downloads_7_days  = DownloadLog.objects.filter(dataset=dataset, downloaded_at__gte=now - timedelta(days=7)).count()
@@ -623,14 +718,17 @@ def dataset_stats(request, id):
         'downloads_30_days': downloads_30_days,
         'by_version':        by_version,
         'recent_logs':       recent_logs,
-        'is_guest':          False,
+        'is_guest':          not request.user.is_authenticated,
     })
 
 
-@login_required
 def version_download(request, id, version_id):
     dataset = get_object_or_404(Dataset, id=id)
     version = get_object_or_404(DatasetVersion, id=version_id, dataset=dataset)
+
+    if not request.user.is_authenticated and dataset.visibility != 'public':
+        messages.error(request, 'Não tens permissão para fazer download deste ficheiro.')
+        return redirect('dataset_detail', dataset.id)
 
     if not version.file:
         messages.error(request, 'Ficheiro não encontrado.')
@@ -645,7 +743,7 @@ def version_download(request, id, version_id):
     DownloadLog.objects.create(
         dataset=dataset,
         version=version,
-        user=request.user,
+        user=request.user if request.user.is_authenticated else None,
         ip_address=request.META.get('REMOTE_ADDR'),
     )
 
