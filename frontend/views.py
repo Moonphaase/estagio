@@ -16,7 +16,6 @@ logger = logging.getLogger('accounts')
 
 
 def dashboard(request):
-    # Alterado: Removido @login_required para permitir acesso público controlado
     if request.user.is_authenticated:
         is_guest = False
         if request.user.is_staff:
@@ -32,9 +31,9 @@ def dashboard(request):
             total_versions  = DatasetVersion.objects.filter(dataset__in=qs).count()
         my_datasets = Dataset.objects.filter(owner=request.user).count()
     else:
-        # Visitante não logado: Vê apenas dados públicos
+        # Visitante não logado: Só vê o que é Público E está Publicado
         is_guest = True
-        qs = Dataset.objects.filter(visibility='public')
+        qs = Dataset.objects.filter(visibility='public', status='published')
         recent_datasets = qs.order_by('-created_at')[:5]
         total_datasets  = qs.count()
         total_versions  = DatasetVersion.objects.filter(dataset__in=qs).count()
@@ -52,7 +51,6 @@ def dashboard(request):
 
 
 def datasets(request):
-    # Alterado: Removido @login_required para permitir visualização pública
     search            = request.GET.get('search', '').strip()
     category_filter   = request.GET.get('category', '')
     visibility_filter = request.GET.get('visibility', '')
@@ -69,7 +67,8 @@ def datasets(request):
             )
     else:
         is_guest = True
-        qs = Dataset.objects.filter(visibility='public')
+        # Visitante não logado: Só vê o que é Público E está Publicado
+        qs = Dataset.objects.filter(visibility='public', status='published')
 
     if search:
         qs = qs.filter(Q(name__icontains=search) | Q(description__icontains=search))
@@ -173,7 +172,6 @@ def comment_delete(request, id, comment_id):
 
 
 def dataset_detail(request, id):
-    # Alterado: Removido @login_required para permitir detalhe de datasets públicos
     dataset = get_object_or_404(Dataset, id=id)
     
     if request.user.is_authenticated:
@@ -186,13 +184,13 @@ def dataset_detail(request, id):
             messages.error(request, 'Não tens permissão para ver este dataset.')
             return redirect('datasets')
     else:
-        # Se for visitante e o dataset for privado, barra o acesso
         is_guest = True
         is_owner = False
         is_favorited = False
-        if dataset.visibility == 'private':
-            messages.error(request, 'Este dataset é privado. Inicie sessão para tentar aceder.')
-            return redirect('login')
+        # Visitante não pode ver datasets privados nem datasets que não estejam publicados
+        if dataset.visibility == 'private' or dataset.status != 'published':
+            messages.error(request, 'Este dataset não está disponível publicamente.')
+            return redirect('dashboard')
 
     versions = DatasetVersion.objects.filter(dataset=dataset).order_by('-created_at')
 
@@ -281,7 +279,6 @@ def dataset_create(request):
 
 
 def categories(request):
-    # Alterado: Removido @login_required para permitir visualização pública das categorias
     search = request.GET.get('search', '').strip()
     qs     = Category.objects.all()
     if search:
@@ -380,7 +377,7 @@ def dataset_versions(request, id):
 def logout_view(request):
     logger.info(f'Logout: {request.user.email if request.user.is_authenticated else "anonimo"}')
     logout(request)
-    return redirect('login')
+    return redirect('dashboard')
 
 
 @login_required
@@ -496,7 +493,7 @@ def profile(request):
             request.user.first_name = request.POST.get('first_name')
             request.user.last_name  = request.POST.get('last_name')
             request.user.save()
-            messages.success(request, 'Perfil atualizado com sucesso!')
+            messages.success(request, 'Perfil updated com sucesso!')
 
         elif form_type == 'password':
             current = request.POST.get('current_password')
