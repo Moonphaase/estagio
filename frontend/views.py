@@ -95,15 +95,12 @@ def login_view(request):
             return redirect('dashboard')
         else:
             logger.warning(f'Login falhado: {email}')
-            return render(request, 'frontend/login.html', {'error': 'Email ou password incorretos'})
+            return render(request, 'frontend/login.html', {'error': 'Email ou password incorretos ou conta pendente de aprovação.'})
     return render(request, 'frontend/login.html')
 
 
-@login_required
 def register_view(request):
-    if not request.user.is_staff:
-        messages.error(request, 'Apenas administradores podem registar novos utilizadores.')
-        return redirect('dashboard')
+    # Alterado: Removido @login_required e a verificação is_staff para tornar o registo público
 
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -118,10 +115,16 @@ def register_view(request):
         if User.objects.filter(email=email).exists():
             return render(request, 'frontend/register.html', {'error': 'Email já está registado'})
 
-        User.objects.create_user(username=username, email=email, password=password)
-        logger.info(f'Utilizador criado: {email} por {request.user.email}')
-        messages.success(request, 'Utilizador criado com sucesso!')
-        return redirect('users')
+        # Cria o utilizador na BD
+        user = User.objects.create_user(username=username, email=email, password=password)
+        
+        # Alterado: Define a conta como inativa para ir para aprovação do administrador
+        user.is_active = False
+        user.save()
+        
+        logger.info(f'Utilizador registado (aguardando aprovação): {email}')
+        messages.success(request, 'Conta criada com sucesso! O seu acesso aguarda aprovação por um administrador.')
+        return redirect('login')
 
     return render(request, 'frontend/register.html')
 
@@ -314,7 +317,7 @@ def dataset_edit(request, id):
         changes = audit_dataset_changes(before, after)
         audit(request, "update", "dataset", dataset.id, f"Dataset '{dataset.name}' editado", changes=changes)
         logger.info(f'Dataset editado: "{dataset.name}" por {request.user.email}')
-        messages.success(request, 'Dataset atualizado com sucesso!')
+        messages.success(request, 'Dataset updated com sucesso!')
         return redirect('dataset_detail', dataset.id)
 
     tags_list = []
