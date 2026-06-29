@@ -3,8 +3,11 @@ from django.shortcuts import redirect
 from . import views
 
 urlpatterns = [
-    # Alterado: A página inicial agora carrega diretamente o Dashboard
+    # 1. Página inicial (raiz) carrega o Dashboard diretamente
     path('', views.dashboard, name='dashboard'),
+    
+    # 2. Mantemos esta linha para que os links antigos/hardcoded do HTML não deem erro 404
+    path('dashboard/', views.dashboard),
     
     path('landing/', views.landing, name='landing'),
     path('about/', views.about, name='about'),
