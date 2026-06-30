@@ -7,16 +7,10 @@
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 py-8 md:py-10 animate-fade-in space-y-8">
     
-    <!-- Cabeçalho Simples e Alinhado -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-gray-100">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Painel de Controlo</h1>
-            <p class="text-sm text-gray-500 mt-0.5">Uma visão geral dos teus dados e atividades recentes.</p>
-        </div>
-        <div class="text-sm text-gray-600 bg-gray-50/80 px-4 py-2 rounded-xl border border-gray-100 flex items-center gap-2 self-start sm:self-center">
-            <span class="w-2 h-2 rounded-full bg-green-500"></span>
-            Olá, <span class="font-semibold text-gray-900">{{ request.user.username|default:"joao" }}</span>
-        </div>
+    <!-- Cabeçalho Simples (Sem o duplicado Olá João) -->
+    <div class="pb-5 border-b border-gray-100">
+        <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Painel de Controlo</h1>
+        <p class="text-sm text-gray-500 mt-0.5">Uma visão geral dos teus dados e atividades recentes.</p>
     </div>
 
     <!-- Grelha de Métricas Equilibrada (4 Colunas com Ícones) -->
@@ -84,13 +78,13 @@
             <h2 class="text-base font-bold text-gray-900 tracking-tight">Datasets recentes</h2>
             <a href="#" class="text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1">
                 Ver todos
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/xl" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                 </svg>
             </a>
         </div>
 
-        <!-- Corpo da Tabela Corrigido -->
+        <!-- Corpo da Tabela -->
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
