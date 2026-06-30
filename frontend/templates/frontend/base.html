@@ -78,15 +78,6 @@
         </div>
     </nav>
 
-    <header class="h-12 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-2xs">
-        <h1 class="text-sm font-bold text-gray-800 tracking-tight">
-            {% block page_title %}{% endblock %}
-        </h1>
-        <div class="flex items-center gap-3">
-            {% block navbar_actions %}{% endblock %}
-        </div>
-    </header>
-
     <main class="flex-1 p-6 w-full max-w-7xl mx-auto">
         {% block content %}{% endblock %}
     </main>
