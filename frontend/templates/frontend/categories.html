@@ -1,64 +1,98 @@
 {% extends "frontend/base.html" %}
 
-{% block title %}Categorias{% endblock %}
-{% block page_title %}Categorias{% endblock %}
-{% block nav_categories %}bg-gray-100 font-medium text-gray-900{% endblock %}
+{% block title %}Categorias - Dataset Manager{% endblock %}
+{% block page_title %}Gestão de Categorias{% endblock %}
+{% block nav_categorias %}bg-gray-100 font-medium text-gray-900{% endblock %}
 
 {% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8 md:py-10 animate-fade-in space-y-6">
+    
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Categorias</h1>
+            <p class="text-sm text-gray-500 mt-0.5">Gerere e organiza as áreas de conhecimento dos teus datasets.</p>
+        </div>
+        
+        <a href="#" class="inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm h-10 px-4 rounded-xl shadow-sm transition-colors self-start sm:self-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Adicionar Categoria
+        </a>
+    </div>
 
-<div class="flex justify-between items-center mb-4">
-    <h2 class="text-sm font-semibold text-gray-700">Todas as categorias</h2>
-    {% if request.user.is_staff %}
-    <a href="{% url 'category_create' %}">
-        <button class="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600">
-            + Adicionar Categoria
-        </button>
-    </a>
-    {% endif %}
+    <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+        <form method="GET" class="flex flex-col sm:flex-row items-end gap-4">
+            
+            <div class="space-y-1.5 flex-1 w-full">
+                <label class="text-xs font-semibold text-gray-500">Pesquisar</label>
+                <input type="text" name="search" placeholder="Nome ou descrição..." 
+                    class="w-full bg-gray-50/50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 focus:bg-white transition-all">
+            </div>
+            
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+                <button type="submit" class="flex-1 sm:flex-none inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm h-10 px-5 rounded-xl shadow-sm transition-colors">
+                    Filtrar
+                </button>
+                <a href="?" class="flex-1 sm:flex-none inline-flex items-center justify-center bg-white hover:bg-gray-50 border border-gray-200 text-gray-500 font-medium text-sm h-10 px-4 rounded-xl transition-colors">
+                    Limpar
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        
+        <div class="px-6 py-4.5 border-b border-gray-100 flex items-center justify-between bg-gray-50/30">
+            <h2 class="text-sm font-bold text-gray-900 tracking-tight">Todas as categorias</h2>
+            <span class="text-xs font-medium text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">5 resultado(s)</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-50/75 border-b border-gray-100 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        <th class="px-6 py-4 text-left w-1/4">Nome</th>
+                        <th class="px-6 py-4 text-left w-2/4">Descrição</th>
+                        <th class="px-6 py-4 text-left w-1/4">Criado em</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 text-sm text-gray-600">
+                    
+                    <tr class="hover:bg-gray-50/50 transition-colors">
+                        <td class="px-6 py-4 font-semibold text-gray-950">Ambiente</td>
+                        <td class="px-6 py-4 text-gray-500 leading-relaxed">Dados climáticos, emissões, biodiversidade e recursos naturais</td>
+                        <td class="px-6 py-4 text-gray-400">23/06/2026</td>
+                    </tr>
+
+                    <tr class="hover:bg-gray-50/50 transition-colors">
+                        <td class="px-6 py-4 font-semibold text-gray-950">Educação</td>
+                        <td class="px-6 py-4 text-gray-500 leading-relaxed">Indicadores de ensino, resultados académicos, instituições e literacia</td>
+                        <td class="px-6 py-4 text-gray-400">23/06/2026</td>
+                    </tr>
+
+                    <tr class="hover:bg-gray-50/50 transition-colors">
+                        <td class="px-6 py-4 font-semibold text-gray-950">Finanças</td>
+                        <td class="px-6 py-4 text-gray-500 leading-relaxed">Dados financeiros, económicos, orçamentais e de mercados</td>
+                        <td class="px-6 py-4 text-gray-400">23/06/2026</td>
+                    </tr>
+
+                    <tr class="hover:bg-gray-50/50 transition-colors">
+                        <td class="px-6 py-4 font-semibold text-gray-950">Saúde</td>
+                        <td class="px-6 py-4 text-gray-500 leading-relaxed">Datasets relacionados com saúde pública, epidemiologia, hospitais e indicadores clínicos</td>
+                        <td class="px-6 py-4 text-gray-400">23/06/2026</td>
+                    </tr>
+
+                    <tr class="hover:bg-gray-50/50 transition-colors">
+                        <td class="px-6 py-4 font-semibold text-gray-950">Transportes</td>
+                        <td class="px-6 py-4 text-gray-500 leading-relaxed">Mobilidade urbana, redes de transporte, tráfego e infraestruturas</td>
+                        <td class="px-6 py-4 text-gray-400">23/06/2026</td>
+                    </tr>
+
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 </div>
-
-<!-- Filtro -->
-<form method="get" class="bg-white rounded-lg border border-gray-200 p-4 mb-4 flex flex-wrap gap-3 items-end">
-    <div class="flex-1 min-w-48">
-        <label class="block text-xs text-gray-500 mb-1">Pesquisar</label>
-        <input type="text" name="search" value="{{ search }}" placeholder="Nome ou descrição..."
-            class="w-full text-sm border border-gray-200 rounded px-3 py-1.5 focus:outline-none focus:border-blue-400">
-    </div>
-    <div class="flex gap-2">
-        <button type="submit" class="text-sm bg-blue-600 text-white px-4 py-1.5 rounded hover:bg-blue-700">Filtrar</button>
-        <a href="{% url 'categories' %}" class="text-sm border border-gray-200 text-gray-600 px-4 py-1.5 rounded hover:bg-gray-50">Limpar</a>
-    </div>
-</form>
-
-<div class="bg-white rounded-lg border border-gray-200">
-    <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-        <span class="text-sm font-semibold text-gray-700">Categorias</span>
-        <span class="text-xs text-gray-400">{{ categories|length }} resultado(s)</span>
-    </div>
-    <table class="w-full text-sm">
-        <thead class="bg-gray-50 text-xs text-gray-500">
-            <tr>
-                <th class="px-4 py-2 text-left">Nome</th>
-                <th class="px-4 py-2 text-left">Descrição</th>
-                <th class="px-4 py-2 text-left">Criado em</th>
-            </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-100">
-            {% for category in categories %}
-            <tr class="hover:bg-gray-50">
-                <td class="px-4 py-2 font-medium text-gray-800">{{ category.name }}</td>
-                <td class="px-4 py-2 text-gray-500">{{ category.description|default:"—" }}</td>
-                <td class="px-4 py-2 text-gray-400">{{ category.created_at|date:"d/m/Y" }}</td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="3" class="px-4 py-6 text-center text-gray-400">
-                    Nenhuma categoria encontrada.
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-
 {% endblock %}
