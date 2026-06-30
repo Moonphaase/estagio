@@ -377,7 +377,7 @@ def dataset_versions(request, id):
 def logout_view(request):
     logger.info(f'Logout: {request.user.email if request.user.is_authenticated else "anonimo"}')
     logout(request)
-    return redirect('dashboard')
+    return redirect('home') # Alterado de 'dashboard' para 'home'
 
 
 @login_required
@@ -813,4 +813,14 @@ def landing(request):
 def about(request):
     return render(request, 'frontend/about.html', {
         'is_guest': not request.user.is_authenticated,
+    })
+
+def home(request):
+# Se o utilizador já estiver logado, vai direto para o dashboard
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+    
+    # Se NÃO estiver logado, renderiza a página Sobre (about) diretamente na raiz do site
+    return render(request, 'frontend/about.html', {
+        'is_guest': True,
     })
