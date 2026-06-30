@@ -83,24 +83,24 @@
     <tr class="hover:bg-gray-50/50 transition-colors">
         <td class="px-6 py-4 font-semibold text-gray-950">
             <a href="{% url 'dataset_detail' dataset.id %}" class="hover:text-blue-600 transition-colors">
-                {{ dataset.name|default:dataset.nome }}
+                {{ dataset }}
             </a>
         </td>
         <td class="px-6 py-4 text-gray-500">
-            {{ dataset.category|default:dataset.categoria|default:"—" }}
+            {{ dataset.category|default:"—" }}
         </td>
         <td class="px-6 py-4">
             <span class="inline-flex items-center text-xs font-medium px-2.5 py-0.5 rounded bg-green-50 text-green-700 border border-green-100">
-                {{ dataset.visibility|default:dataset.visibilidade|default:"Público" }}
+                {{ dataset.visibility|default:"Público" }}
             </span>
         </td>
         <td class="px-6 py-4">
             <span class="inline-flex items-center text-xs font-medium px-2.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">
-                {{ dataset.status|default:dataset.estado|default:"Publicado" }}
+                {{ dataset.status|default:"Publicado" }}
             </span>
         </td>
         <td class="px-6 py-4 text-gray-500">
-            {{ dataset.created_at|date:"d/m/Y"|default:dataset.date|default:dataset.data|default:"—" }}
+            {{ dataset.created_at|date:"d/m/Y"|default:"—" }}
         </td>
         
         <td class="px-6 py-4 text-right space-x-3 whitespace-nowrap">
