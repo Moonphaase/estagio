@@ -47,8 +47,9 @@
             </button>
         </form>
 
+        <!-- ALTERADO: O link agora usa a tag oficial do Django -->
         <p class="text-xs text-center text-gray-400 mt-4">
-            Já tens conta? <a href="/login" class="text-blue-600 hover:underline">Entra aqui</a>
+            Já tens conta? <a href="{% url 'login' %}" class="text-blue-600 hover:underline">Entra aqui</a>
         </p>
     </div>
 
