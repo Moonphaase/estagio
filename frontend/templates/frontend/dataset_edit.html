@@ -11,18 +11,18 @@
         {% csrf_token %}
 
         <div class="mb-4">
-            <label class="block text-xs text-gray-500 mb-1">Nome</label>
-            <input type="text" name="name" value="{{ dataset.name }}" class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400">
+            <label class="block text-xs text-gray-500 mb-1">Nome <span class="text-red-500">*</span></label>
+            <input type="text" name="name" value="{{ dataset.name }}" class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400" required>
         </div>
 
         <div class="mb-4">
             <label class="block text-xs text-gray-500 mb-1">Descrição</label>
-            <textarea name="description" rows="3" class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400">{{ dataset.description }}</textarea>
+            <textarea name="description" rows="3" class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400" placeholder="Descreve o dataset...">{{ dataset.description }}</textarea>
         </div>
 
         <div class="mb-4">
-            <label class="block text-xs text-gray-500 mb-1">Categoria</label>
-            <select name="category" class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400">
+            <label class="block text-xs text-gray-500 mb-1">Categoria <span class="text-red-500">*</span></label>
+            <select name="category" class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400" required>
                 <option value="">Seleciona uma categoria</option>
                 {% for category in categories %}
                     <option value="{{ category.id }}" {% if dataset.category and dataset.category.id == category.id %}selected{% endif %}>{{ category.name }}</option>
