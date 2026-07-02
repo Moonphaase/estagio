@@ -5,18 +5,10 @@
 {% block nav_datasets %}bg-gray-100 font-medium text-gray-900{% endblock %}
 
 {% block navbar_actions %}
-    <a href="/datasets/{{ dataset.id }}/stats/" class="text-xs border border-gray-200 text-gray-600 px-3 py-1.5 rounded hover:bg-gray-50">Estatísticas</a>
+    <a href="{% url 'dataset_stats' dataset.id %}" class="text-xs border border-gray-200 text-gray-600 px-3 py-1.5 rounded hover:bg-gray-50">Estatísticas</a>
     {% if is_owner %}
-    <a href="/datasets/{{ dataset.id }}/partilhar/" class="text-xs border border-gray-200 text-gray-600 px-3 py-1.5 rounded hover:bg-gray-50">Partilhar</a>
-    <a href="/datasets/{{ dataset.id }}/edit/" class="text-xs border border-gray-200 text-gray-600 px-3 py-1.5 rounded hover:bg-gray-50">Editar</a>
-    {% endif %}
-    {% if is_owner and dataset.status == 'draft' %}
-    <form method="post" action="/datasets/{{ dataset.id }}/submeter/">
-        {% csrf_token %}
-        <button type="submit" class="text-xs bg-yellow-500 text-white px-3 py-1.5 rounded hover:bg-yellow-600">
-            Submeter para Aprovação
-        </button>
-    </form>
+    <a href="{% url 'dataset_share' dataset.id %}" class="text-xs border border-gray-200 text-gray-600 px-3 py-1.5 rounded hover:bg-gray-50">Partilhar</a>
+    <a href="{% url 'dataset_edit' dataset.id %}" class="text-xs border border-gray-200 text-gray-600 px-3 py-1.5 rounded hover:bg-gray-50">Editar</a>
     {% endif %}
 {% endblock %}
 
@@ -29,11 +21,12 @@
             <p class="text-sm text-gray-500">{{ dataset.description|default:"Sem descrição." }}</p>
         </div>
         <div class="flex items-center gap-2">
+            <!-- Botão Guardar/Favorito -->
             <button
                 x-data="{ favorited: {% if user.is_authenticated %}{{ is_favorited|yesno:'true,false' }}{% else %}localStorage.getItem('favorite_{{ dataset.id }}') === 'true'{% endif %} }"
                 @click="
                     {% if user.is_authenticated %}
-                    fetch('/datasets/{{ dataset.id }}/favorite/', {
+                    fetch('{% url 'dataset_favorite' dataset.id %}', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -58,12 +51,15 @@
                 <span x-text="favorited ? 'Guardado' : 'Guardar'"></span>
             </button>
 
+            <!-- Badge Visibilidade -->
             <span class="text-xs px-2 py-0.5 rounded
                 {% if dataset.visibility == 'public' %}bg-green-100 text-green-700
                 {% elif dataset.visibility == 'private' %}bg-red-100 text-red-700
                 {% else %}bg-yellow-100 text-yellow-700{% endif %}">
                 {{ dataset.get_visibility_display }}
             </span>
+            
+            <!-- Badge Estado -->
             <span class="text-xs px-2 py-0.5 rounded
                 {% if dataset.status == 'published' %}bg-blue-100 text-blue-700
                 {% elif dataset.status == 'draft' %}bg-gray-100 text-gray-600
@@ -71,6 +67,16 @@
                 {% else %}bg-orange-100 text-orange-700{% endif %}">
                 {{ dataset.get_status_display }}
             </span>
+
+            <!-- NOVO: Botão Submeter para Aprovação integrado ao lado dos Badges -->
+            {% if is_owner and dataset.status == 'draft' %}
+            <form method="post" action="{% url 'dataset_submit' dataset.id %}" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 transition-colors font-medium shadow-sm">
+                    Submeter para Aprovação
+                </button>
+            </form>
+            {% endif %}
         </div>
     </div>
     <div class="mt-4 pt-4 border-t border-gray-100 flex gap-6 text-xs text-gray-400">
@@ -87,11 +93,12 @@
     {% endif %}
 </div>
 
+<!-- VERSÕES -->
 <div class="bg-white rounded-lg border border-gray-200 mb-4">
     <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
         <h2 class="text-sm font-semibold text-gray-700">Versões</h2>
         {% if is_owner %}
-        <a href="/datasets/{{ dataset.id }}/versions/create/" class="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700">+ Nova Versão</a>
+        <a href="{% url 'version_create' dataset.id %}" class="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700">+ Nova Versão</a>
         {% endif %}
     </div>
     <table class="w-full text-sm">
@@ -120,10 +127,10 @@
                     <td class="px-4 py-3">
                         <div class="flex gap-3">
                             {% if version.file %}
-                            <a href="/datasets/{{ dataset.id }}/versions/{{ version.pk }}/download/" class="text-xs text-blue-600 hover:underline">Download</a>
+                            <a href="{% url 'version_download' dataset.id version.pk %}" class="text-xs text-blue-600 hover:underline">Download</a>
                             {% endif %}
                             {% if is_owner %}
-                            <form method="post" action="/datasets/{{ dataset.id }}/versions/{{ version.pk }}/delete/" onsubmit="return confirm('Apagar versão {{ version.version }}?')">
+                            <form method="post" action="{% url 'version_delete' dataset.id version.pk %}" onsubmit="return confirm('Apagar versão {{ version.version }}?')">
                                 {% csrf_token %}
                                 <button type="submit" class="text-xs text-red-500 hover:underline">Apagar</button>
                             </form>
@@ -142,6 +149,7 @@
 </div>
 
 {% if csv_headers %}
+<!-- PREVIEW CSV -->
 <div class="bg-white rounded-lg border border-gray-200 mb-4">
     <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
         <h2 class="text-sm font-semibold text-gray-700">Preview CSV</h2>
@@ -177,7 +185,6 @@
         <h2 class="text-sm font-semibold text-gray-700">Comentários ({{ comments|length }})</h2>
     </div>
 
-    <!-- Lista de comentários -->
     <div class="divide-y divide-gray-100">
         {% for comment in comments %}
         <div class="px-4 py-3">
@@ -186,7 +193,7 @@
                 <div class="flex items-center gap-3">
                     <span class="text-xs text-gray-400">{{ comment.created_at|date:"d/m/Y H:i" }}</span>
                     {% if comment.author == request.user or request.user.is_staff %}
-                    <form method="post" action="/datasets/{{ dataset.id }}/comentarios/{{ comment.id }}/apagar/" onsubmit="return confirm('Apagar comentário?')">
+                    <form method="post" action="{% url 'comment_delete' dataset.id comment.id %}" onsubmit="return confirm('Apagar comentário?')">
                         {% csrf_token %}
                         <button type="submit" class="text-xs text-red-400 hover:text-red-600">Apagar</button>
                     </form>
@@ -200,9 +207,9 @@
         {% endfor %}
     </div>
 
-    <!-- Formulário para novo comentário -->
+    <!-- Formulário de Comentário -->
     <div class="px-4 py-3 border-t border-gray-100 bg-gray-50">
-        <form method="post" action="/datasets/{{ dataset.id }}/comentarios/">
+        <form method="post" action="{% url 'comment_create' dataset.id %}">
             {% csrf_token %}
             <textarea name="content" rows="2" placeholder="Escreve um comentário..."
                 class="w-full text-sm border border-gray-200 rounded px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400"></textarea>
