@@ -110,9 +110,12 @@ def datasets(request):
     })
 
 @login_required
+def manage_api_keys(request):
+    return render(request, 'frontend/api_keys/manage.html')
+
+@login_required
 def api_keys_api(request, id=None):
     if request.method == "GET":
-        # Retorna a lista de chaves do utilizador
         keys = ApiKey.objects.filter(user=request.user).values('id', 'name', 'key_prefix')
         return JsonResponse(list(keys), safe=False)
 
