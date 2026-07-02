@@ -31,7 +31,7 @@ urlpatterns = [
     # Rota personalizada para a gestão de chaves no frontend
     path('api-keys/', views.manage_api_keys, name='manage_api_keys'),
     
-    # Rota para a API de chaves (mantém apenas dentro de api/auth/ para não conflitar)
+    # Rota para a API de chaves
     path('api/auth/api-keys/', include('api_keys.urls')),
 
     # ── Documentação Swagger ──────────────────────────────────────────────────
