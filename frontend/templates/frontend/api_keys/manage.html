@@ -2,68 +2,17 @@
 
 {% block content %}
 <div class="container mx-auto px-6 py-8">
-    <!-- Cabeçalho idêntico ao da página de Datasets -->
+    <!-- Cabeçalho -->
     <h2 class="text-2xl font-bold text-gray-800 mb-2">API Keys</h2>
     <p class="text-gray-600 mb-6">Gerencie as suas chaves de acesso para integração com a API.</p>
 
     <!-- Barra de Ação -->
-<div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6 flex items-center gap-4">
-    <input type="text" id="keyName" placeholder="Nome da chave..." class="border border-gray-300 rounded px-3 py-2 w-64">
-    <!-- Nome alterado para "Gerar Chave" -->
-    <button onclick="createKey()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
-        Gerar Chave
-    </button>
-</div>
-
-<script>
-    async function createKey() {
-        const nameInput = document.getElementById('keyName');
-        const name = nameInput.value;
-        
-        if (!name) {
-            alert('Por favor, insira um nome para a chave.');
-            return;
-        }
-
-        const res = await fetch('/api/auth/api-keys/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json', 
-                'X-CSRFToken': '{{ csrf_token }}'
-            },
-            body: JSON.stringify({ name: name })
-        });
-        
-        if (res.ok) {
-            const data = await res.json();
-            alert('Chave gerada com sucesso! Copie agora:\n\n' + data.key);
-            nameInput.value = ''; // Limpa o campo
-            loadKeys(); // Recarrega a tabela
-        } else {
-            const errorData = await res.json();
-            alert('Erro ao gerar chave: ' + (errorData.detail || 'Tente novamente.'));
-        }
-    }
-
-    // Certifica-te que a função loadKeys() está definida abaixo conforme enviamos anteriormente
-    async function loadKeys() {
-        const response = await fetch('/api/auth/api-keys/');
-        const data = await response.json();
-        const tbody = document.getElementById('keysTableBody');
-        tbody.innerHTML = data.map(key => `
-            <tr class="border-b">
-                <td class="px-6 py-4">${key.name}</td>
-                <td class="px-6 py-4">${key.key_prefix}</td>
-                <td class="px-6 py-4 text-right">
-                    <button onclick="deleteKey(${key.id})" class="text-red-600 hover:text-red-800 font-medium">Eliminar</button>
-                </td>
-            </tr>
-        `).join('');
-    }
-
-    // Carrega as chaves ao iniciar
-    loadKeys();
-</script>
+    <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6 flex items-center gap-4">
+        <input type="text" id="keyName" placeholder="Nome da chave..." class="border border-gray-300 rounded px-3 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <button onclick="createKey()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-medium">
+            Gerar Chave
+        </button>
+    </div>
 
     <!-- Tabela estilizada -->
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -83,8 +32,73 @@
 </div>
 
 <script>
-    // Mantém a lógica fetch que definimos anteriormente, 
-    // mas garante que as classes nos elementos dinâmicos 
-    // seguem este padrão (ex: text-red-600 hover:text-red-800)
+    // Função para carregar as chaves existentes
+    async function loadKeys() {
+        try {
+            const response = await fetch('/api/auth/api-keys/');
+            const keys = await response.json();
+            const tbody = document.getElementById('keysTableBody');
+            
+            tbody.innerHTML = keys.map(key => `
+                <tr>
+                    <td class="px-6 py-4 text-gray-700">${key.name}</td>
+                    <td class="px-6 py-4 text-gray-500 font-mono">${key.key_prefix}</td>
+                    <td class="px-6 py-4 text-right">
+                        <button onclick="deleteKey(${key.id})" class="text-red-600 hover:text-red-800 font-medium text-sm">Eliminar</button>
+                    </td>
+                </tr>
+            `).join('');
+        } catch (error) {
+            console.error('Erro ao carregar chaves:', error);
+        }
+    }
+
+    // Função para gerar uma nova chave
+    async function createKey() {
+        const nameInput = document.getElementById('keyName');
+        const name = nameInput.value.trim();
+        
+        if (!name) {
+            alert('Por favor, insira um nome para a chave.');
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/auth/api-keys/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ name: name })
+            });
+            
+            if (res.ok) {
+                const data = await res.json();
+                alert('Chave gerada com sucesso! Copie agora:\n\n' + data.key);
+                nameInput.value = '';
+                loadKeys();
+            } else {
+                const errorData = await res.json();
+                alert('Erro: ' + (errorData.detail || 'Não foi possível gerar a chave.'));
+            }
+        } catch (error) {
+            alert('Erro de conexão ao servidor.');
+        }
+    }
+
+    // Função para eliminar chave
+    async function deleteKey(id) {
+        if (!confirm('Tem a certeza que deseja eliminar esta chave?')) return;
+
+        await fetch(`/api/auth/api-keys/${id}/`, {
+            method: 'DELETE',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        });
+        loadKeys();
+    }
+
+    // Carregar dados ao iniciar
+    loadKeys();
 </script>
 {% endblock %}
