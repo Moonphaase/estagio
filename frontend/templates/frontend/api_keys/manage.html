@@ -29,21 +29,26 @@
 window.onload = carregarChaves;
 
 async function carregarChaves() {
-    const res = await fetch('/api/auth/api-keys/');
-    const chaves = await res.json();
-    const lista = document.getElementById('listaChaves');
-    
-    if (chaves.length === 0) {
-        lista.innerHTML = '<p class="text-gray-500">Não tens chaves geradas.</p>';
-        return;
+    try {
+        const res = await fetch('/api/auth/api-keys/');
+        if (!res.ok) throw new Error(`Erro: ${res.status}`);
+        const chaves = await res.json();
+        
+        const lista = document.getElementById('listaChaves');
+        if (chaves.length === 0) {
+            lista.innerHTML = '<p class="text-gray-500">Não tens chaves geradas.</p>';
+        } else {
+            lista.innerHTML = chaves.map(k => `
+                <div class="flex justify-between items-center border-b p-2">
+                    <span>${k.name} (<code>${k.key_prefix}****</code>)</span>
+                    <button onclick="apagarChave(${k.id})" class="text-red-500">Apagar</button>
+                </div>
+            `).join('');
+        }
+    } catch (e) {
+        console.error("Erro ao carregar:", e);
+        document.getElementById('listaChaves').innerHTML = '<p class="text-red-500">Erro ao carregar chaves. Vê a consola.</p>';
     }
-
-    lista.innerHTML = chaves.map(k => `
-        <div class="flex justify-between items-center border-b p-2">
-            <span>${k.name} (<code>${k.key_prefix}****</code>)</span>
-            <button onclick="apagarChave(${k.id})" class="text-red-500 hover:text-red-700">Apagar</button>
-        </div>
-    `).join('');
 }
 
 async function gerarChave() {
