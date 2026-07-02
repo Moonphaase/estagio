@@ -750,8 +750,40 @@ def aprovacoes(request):
     if not request.user.is_staff:
         messages.error(request, 'Não tens permissão.')
         return redirect('dashboard')
+    
+    # Carrega os Datasets pendentes
     pendentes = Dataset.objects.filter(status='pending').order_by('-created_at')
-    return render(request, 'frontend/aprovacoes.html', {'pendentes': pendentes})
+    
+    # NOVO: Carrega os Utilizadores pendentes (is_active=False)
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    utilizadores_pendentes = User.objects.filter(is_active=False).order_by('-date_joined')
+    
+    return render(request, 'frontend/aprovacoes.html', {
+        'pendentes': pendentes,
+        'utilizadores_pendentes': utilizadores_pendentes,
+    })
+
+
+@login_required
+def user_approve_action(request, id):
+    if not request.user.is_staff:
+        messages.error(request, 'Não tens permissão.')
+        return redirect('dashboard')
+        
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    user_to_approve = get_object_or_404(User, id=id)
+    
+    if request.method == 'POST':
+        user_to_approve.is_active = True
+        user_to_approve.save()
+        
+        audit(request, "update", "user", user_to_approve.id, f"Utilizador '{user_to_approve.username}' aprovado e ativado.")
+        logger.info(f'Utilizador aprovado: {user_to_approve.email} por {request.user.email}')
+        messages.success(request, f'Utilizador "{user_to_approve.username}" aprovado com sucesso!')
+        
+    return redirect('aprovacoes')
 
 
 @login_required
