@@ -15,6 +15,7 @@ from datasets.models import Dataset, DatasetVersion, DownloadLog, AuditLog, Data
 from datasets.audit import audit, audit_dataset_changes
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
 
 logger = logging.getLogger('accounts')
 
@@ -107,38 +108,14 @@ def datasets(request):
     })
 
 @login_required
-@require_http_methods(["GET", "POST", "DELETE"])
-def manage_api_keys(request, id=None):
-    # Se precisares de um modelo, substitui 'ApiKey' pelo nome real do teu modelo
-    # from api_keys.models import ApiKey 
+def manage_api_keys(request):
+    return render(request, 'frontend/api_keys/manage.html')
 
-    if request.method == "GET":
-        # Aqui listarias as chaves existentes do utilizador
-        # keys = ApiKey.objects.filter(user=request.user).values('id', 'name', 'key_prefix')
-        return JsonResponse([], safe=False)
-
-    elif request.method == "POST":
-        try:
-            data = json.loads(request.body)
-            name = data.get('name')
-            
-            # Lógica: Gerar chave, salvar no BD e retornar o valor (exibir só uma vez!)
-            # nova_chave = secrets.token_hex(20)
-            # ApiKey.objects.create(user=request.user, name=name, key=nova_chave, key_prefix=nova_chave[:8])
-            
-            return JsonResponse({
-                'message': 'Chave gerada com sucesso',
-                'key': 'exemplo_de_chave_gerada_aqui' 
-            }, status=201)
-        except Exception as e:
-            return JsonResponse({'detail': str(e)}, status=400)
-
-    elif request.method == "DELETE" and id:
-        # Lógica para apagar a chave
-        # ApiKey.objects.filter(id=id, user=request.user).delete()
-        return JsonResponse({'message': 'Chave eliminada'}, status=200)
-    
-    return JsonResponse({'detail': 'Método não permitido'}, status=405)
+@login_required
+def api_keys_api(request):
+    if request.method == "POST":
+        return JsonResponse({'message': 'Ligação estabelecida com sucesso!'}, status=200)
+    return JsonResponse({'message': 'Apenas POST permitido'}, status=405)
 
 def login_view(request):
     if request.method == 'POST':
