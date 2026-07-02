@@ -38,9 +38,10 @@ async function carregarChaves() {
         if (chaves.length === 0) {
             lista.innerHTML = '<p class="text-gray-500">Não tens chaves geradas.</p>';
         } else {
+            // Removida a censura (****) mantendo apenas o key_prefix
             lista.innerHTML = chaves.map(k => `
                 <div class="flex justify-between items-center border-b p-2">
-                    <span>${k.name} (<code>${k.key_prefix}****</code>)</span>
+                    <span>${k.name} (<code>${k.key_prefix}</code>)</span>
                     <button onclick="apagarChave(${k.id})" class="text-red-500">Apagar</button>
                 </div>
             `).join('');
