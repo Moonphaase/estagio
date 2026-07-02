@@ -7,6 +7,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from categories.views import CategoryViewSet
 from datasets.views   import DatasetViewSet, DatasetVersionViewSet
+from frontend import views  # Importa as views do frontend
 
 # ── router principal ──────────────────────────────────────────────────────────
 router = routers.SimpleRouter()
@@ -18,14 +19,20 @@ datasets_router = routers.NestedSimpleRouter(router, r"datasets", lookup="datase
 datasets_router.register(r"versions", DatasetVersionViewSet, basename="dataset-versions")
 
 urlpatterns = [
-    path("admin/",    admin.site.urls),
+    path("admin/",     admin.site.urls),
     path("api/auth/", include("accounts.urls")),
-    path("api/",      include(router.urls)),
-    path("api/",      include(datasets_router.urls)),
+    path("api/",       include(router.urls)),
+    path("api/",       include(datasets_router.urls)),
     path("api-auth/", include("rest_framework.urls")),
-    path("",          include("frontend.urls")),
+    
+    # ── Frontend Rotas ────────────────────────────────────────────────────────
+    path("",           include("frontend.urls")),
+    
+    # Rota personalizada para a gestão de chaves no frontend
+    path('api-keys/', views.manage_api_keys, name='manage_api_keys'),
+    
+    # Rota para a API de chaves (mantém apenas dentro de api/auth/ para não conflitar)
     path('api/auth/api-keys/', include('api_keys.urls')),
-    path('api-keys/', include('api_keys.urls')), # Certifica-te que api_keys.urls trata as views de gestão
 
     # ── Documentação Swagger ──────────────────────────────────────────────────
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
