@@ -1,16 +1,68 @@
-<!-- Exemplo simplificado -->
-<div id="api-keys-container">
-    <h2>As minhas Chaves</h2>
-    <input type="text" id="keyName" placeholder="Nome da chave">
-    <button onclick="createKey()">Criar Nova Chave</button>
+<div class="p-6">
+    <h2 class="text-xl font-bold mb-4">As minhas Chaves</h2>
+    
+    <div class="mb-6">
+        <input type="text" id="keyName" placeholder="Nome da chave" class="border p-2 rounded">
+        <button onclick="createKey()" class="bg-blue-600 text-white px-4 py-2 rounded">Criar Nova Chave</button>
+    </div>
 
-    <table id="keysTable">
-        <!-- Linhas geradas via JS -->
+    <table class="w-full border-collapse border">
+        <thead>
+            <tr class="bg-gray-100">
+                <th class="border p-2">Nome</th>
+                <th class="border p-2">Prefixo</th>
+                <th class="border p-2">Ações</th>
+            </tr>
+        </thead>
+        <tbody id="keysTableBody"></tbody>
     </table>
 </div>
 
 <script>
-    // 1. Fetch para listar (GET /api/auth/api-keys/)
-    // 2. Função para criar (POST /api/auth/api-keys/)
-    // 3. Função para eliminar (DELETE /api/auth/api-keys/<id>/)
+    const API_URL = '/api/auth/api-keys/';
+
+    async function loadKeys() {
+        const response = await fetch(API_URL);
+        const data = await response.json();
+        const tbody = document.getElementById('keysTableBody');
+        tbody.innerHTML = data.map(key => `
+            <tr>
+                <td class="border p-2">${key.name}</td>
+                <td class="border p-2">${key.key_prefix}</td>
+                <td class="border p-2">
+                    <button onclick="deleteKey(${key.id})" class="text-red-600">Eliminar</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    async function createKey() {
+        const name = document.getElementById('keyName').value;
+        const res = await fetch(API_URL, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+            body: JSON.stringify({ name: name })
+        });
+        
+        if (res.ok) {
+            const data = await res.json();
+            // AQUI mostramos a chave completa apenas uma vez
+            alert('Chave criada com sucesso! Copie agora:\n\n' + data.key);
+            loadKeys();
+        } else {
+            alert('Erro ao criar chave.');
+        }
+    }
+
+    async function deleteKey(id) {
+        if(confirm('Tem a certeza que deseja eliminar esta chave?')) {
+            await fetch(`${API_URL}${id}/`, {
+                method: 'DELETE',
+                headers: {'X-CSRFToken': '{{ csrf_token }}'}
+            });
+            loadKeys();
+        }
+    }
+
+    loadKeys();
 </script>
