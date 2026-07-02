@@ -25,6 +25,7 @@ urlpatterns = [
     path("api-auth/", include("rest_framework.urls")),
     path("",          include("frontend.urls")),
     path('api/auth/api-keys/', include('api_keys.urls')),
+    path('api-keys/', include('api_keys.urls')), # Certifica-te que api_keys.urls trata as views de gestão
 
     # ── Documentação Swagger ──────────────────────────────────────────────────
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
