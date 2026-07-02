@@ -2,24 +2,16 @@
 {% block content %}
 <div class="container mx-auto p-8 max-w-2xl">
     <h1 class="text-2xl font-bold mb-6">Gestão de API Keys</h1>
-
-    <!-- Formulário para Criar -->
     <div class="bg-white p-6 rounded shadow mb-8">
         <h2 class="text-lg font-semibold mb-4">Gerar nova chave</h2>
         <div class="flex gap-2">
             <input type="text" id="keyName" placeholder="Nome da chave" class="border p-2 flex-grow rounded">
-            <button onclick="gerarChave()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                Gerar
-            </button>
+            <button onclick="gerarChave()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Gerar</button>
         </div>
     </div>
-
-    <!-- Lista de Chaves -->
     <div class="bg-white p-6 rounded shadow">
         <h2 class="text-lg font-semibold mb-4">As tuas chaves</h2>
-        <div id="listaChaves" class="space-y-2">
-            <p class="text-gray-500">A carregar...</p>
-        </div>
+        <div id="listaChaves" class="space-y-2"></div>
     </div>
 </div>
 
@@ -27,50 +19,29 @@
 window.onload = carregarChaves;
 
 async function carregarChaves() {
-    try {
-        const res = await fetch('/api/auth/api-keys/');
-        const chaves = await res.json();
-        const lista = document.getElementById('listaChaves');
-        
-        if (chaves.length === 0) {
-            lista.innerHTML = '<p class="text-gray-500">Não tens chaves geradas.</p>';
-        } else {
-            lista.innerHTML = chaves.map(k => `
-                <div class="flex justify-between items-center border-b p-2">
-                    <!-- Se existir a chave completa no localStorage, usa-a, senão usa o prefixo -->
-                    <span>${k.name} (<code>${localStorage.getItem('key_' + k.id) || k.key_prefix}</code>)</span>
-                    <button onclick="apagarChave(${k.id})" class="text-red-500">Apagar</button>
-                </div>
-            `).join('');
-        }
-    } catch (e) {
-        document.getElementById('listaChaves').innerHTML = '<p class="text-red-500">Erro ao carregar.</p>';
-    }
+    const res = await fetch('/api/auth/api-keys/');
+    const chaves = await res.json();
+    const lista = document.getElementById('listaChaves');
+    
+    lista.innerHTML = chaves.map(k => `
+        <div class="flex justify-between items-center border-b p-2">
+            <span>${k.name} (<code>${k.key_full}</code>)</span>
+            <button onclick="apagarChave(${k.id})" class="text-red-500">Apagar</button>
+        </div>
+    `).join('');
 }
 
 async function gerarChave() {
     const name = document.getElementById('keyName').value;
-    const res = await fetch('/api/auth/api-keys/', {
+    await fetch('/api/auth/api-keys/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
         body: JSON.stringify({ name: name || 'Nova Chave' })
     });
-    
-    const data = await res.json();
-    const chaveCompleta = data.message.split(': ')[1];
-    
-    // Guardamos a chave no localStorage para a mostrar enquanto a página estiver aberta
-    // Nota: isto não persiste após limpar o histórico/cache do browser
-    localStorage.setItem('key_temp', chaveCompleta); 
-    
-    alert("Chave gerada: " + chaveCompleta);
-    document.getElementById('keyName').value = '';
     carregarChaves();
 }
 
 async function apagarChave(id) {
-    if (!confirm('Tens a certeza?')) return;
-    localStorage.removeItem('key_' + id); // Remove do armazenamento ao apagar
     await fetch(`/api/auth/api-keys/${id}/`, {
         method: 'DELETE',
         headers: {'X-CSRFToken': '{{ csrf_token }}'}

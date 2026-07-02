@@ -18,23 +18,10 @@ def dataset_version_upload_path(instance, filename):
 # --- MODELO PARA API KEYS ---
 
 class ApiKey(models.Model):
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.CASCADE, 
-        related_name="dataset_api_keys"  # MUITO IMPORTANTE: Mudar o nome aqui
-    )
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="dataset_api_keys")
     name = models.CharField(max_length=100)
-    key_hash = models.CharField(max_length=128)
-    key_prefix = models.CharField(max_length=10)
+    key_full = models.CharField(max_length=128) # Guardar a chave completa aqui
     created_at = models.DateTimeField(auto_now_add=True)
-    last_used = models.DateTimeField(null=True, blank=True)
-
-    class Meta:
-        verbose_name = "API Key"
-        verbose_name_plural = "API Keys"
-
-    def __str__(self):
-        return f"{self.name} ({self.key_prefix}...)"
 
 # --- MODELOS DE DATASETS ---
 

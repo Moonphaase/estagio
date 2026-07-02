@@ -116,17 +116,19 @@ def manage_api_keys(request):
 @login_required
 def api_keys_api(request, id=None):
     if request.method == "GET":
-        keys = ApiKey.objects.filter(user=request.user).values('id', 'name', 'key_prefix')
+        # Agora buscamos o campo 'key_full' em vez do prefixo
+        keys = ApiKey.objects.filter(user=request.user).values('id', 'name', 'key_full')
         return JsonResponse(list(keys), safe=False)
 
     elif request.method == "POST":
         data = json.loads(request.body)
         raw_key = secrets.token_hex(20)
+        
+        # Guardamos a chave completa diretamente
         ApiKey.objects.create(
             user=request.user,
             name=data.get('name', 'Nova Chave'),
-            key_hash=make_password(raw_key),
-            key_prefix=raw_key[:8]
+            key_full=raw_key
         )
         return JsonResponse({'message': f'Chave gerada: {raw_key}'}, status=201)
 
