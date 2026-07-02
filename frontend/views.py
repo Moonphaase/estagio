@@ -23,8 +23,9 @@ def dashboard(request):
             total_datasets  = Dataset.objects.count()
             total_versions  = DatasetVersion.objects.count()
         else:
+            # ALTERADO: Garante que vês os teus próprios OU os públicos de outros que já foram publicados
             qs = Dataset.objects.filter(
-                Q(visibility='public') | Q(owner=request.user)
+                Q(owner=request.user) | Q(visibility='public', status='published')
             )
             recent_datasets = qs.order_by('-created_at')[:5]
             total_datasets  = qs.count()
