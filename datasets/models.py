@@ -1,19 +1,38 @@
 import os
+import secrets
 
 from django.conf import settings
 from django.db import models
 from django.utils.text import slugify
+from django.contrib.auth.hashers import make_password
 
 from categories.models import Category
 from core.helpers import validate_file_extension, validate_file_size, generate_checksum
 
 ALLOWED_EXTENSIONS = [".csv", ".json", ".xlsx", ".parquet", ".zip"]
 
-
 def dataset_version_upload_path(instance, filename):
     safe_name = os.path.basename(filename)
     return f"datasets/{instance.dataset.id}/{instance.version}/{safe_name}"
 
+# --- MODELO PARA API KEYS ---
+
+class ApiKey(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="api_keys")
+    name = models.CharField(max_length=100)
+    key_hash = models.CharField(max_length=128)  # Guardamos o hash, não a chave real
+    key_prefix = models.CharField(max_length=10)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "API Key"
+        verbose_name_plural = "API Keys"
+
+    def __str__(self):
+        return f"{self.name} ({self.key_prefix}...)"
+
+# --- MODELOS DE DATASETS ---
 
 class Dataset(models.Model):
     class Visibility(models.TextChoices):
@@ -22,8 +41,8 @@ class Dataset(models.Model):
         INTERNAL = "internal", "Interno"
 
     class Status(models.TextChoices):
-        DRAFT     = "draft",     "Rascunho"
-        PENDING   = "pending",   "Pendente"
+        DRAFT     = "draft",    "Rascunho"
+        PENDING   = "pending",  "Pendente"
         PUBLISHED = "published", "Publicado"
         ARCHIVED  = "archived",  "Arquivado"
 
@@ -73,7 +92,6 @@ class Dataset(models.Model):
     def __str__(self):
         return self.name
 
-
 class DatasetVersion(models.Model):
     dataset    = models.ForeignKey(
         Dataset, on_delete=models.CASCADE, related_name="versions"
@@ -115,7 +133,6 @@ class DatasetVersion(models.Model):
     def __str__(self):
         return f"{self.dataset.name} - v{self.version}"
 
-
 class DatasetMetadata(models.Model):
     dataset     = models.OneToOneField(
         Dataset, on_delete=models.CASCADE, related_name="metadata"
@@ -134,7 +151,6 @@ class DatasetMetadata(models.Model):
 
     def __str__(self):
         return f"Metadados - {self.dataset.name}"
-
 
 class Comment(models.Model):
     dataset    = models.ForeignKey(
@@ -155,7 +171,6 @@ class Comment(models.Model):
 
     def __str__(self):
         return f"Comentário de {self.author} em {self.dataset.name}"
-
 
 class DownloadLog(models.Model):
     dataset       = models.ForeignKey(
@@ -184,7 +199,6 @@ class DownloadLog(models.Model):
     def __str__(self):
         return f"Download de {self.dataset.name} em {self.downloaded_at:%Y-%m-%d %H:%M}"
 
-
 class AuditLog(models.Model):
     class Action(models.TextChoices):
         CREATE = "create", "Criacao"
@@ -197,17 +211,17 @@ class AuditLog(models.Model):
         CATEGORY = "category", "Categoria"
         USER     = "user",     "Utilizador"
 
-    user        = models.ForeignKey(
+    user          = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
         null=True, blank=True, related_name="audit_logs"
     )
-    action      = models.CharField(max_length=10, choices=Action.choices)
-    resource    = models.CharField(max_length=10, choices=Resource.choices)
-    resource_id = models.PositiveIntegerField(null=True, blank=True)
-    description = models.TextField(blank=True)
-    changes     = models.JSONField(default=dict, blank=True)
-    ip_address  = models.GenericIPAddressField(null=True, blank=True)
-    timestamp   = models.DateTimeField(auto_now_add=True)
+    action        = models.CharField(max_length=10, choices=Action.choices)
+    resource      = models.CharField(max_length=10, choices=Resource.choices)
+    resource_id   = models.PositiveIntegerField(null=True, blank=True)
+    description   = models.TextField(blank=True)
+    changes       = models.JSONField(default=dict, blank=True)
+    ip_address    = models.GenericIPAddressField(null=True, blank=True)
+    timestamp     = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name = "Log de Auditoria"
@@ -221,7 +235,6 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f"[{self.timestamp:%Y-%m-%d %H:%M}] {self.user} - {self.get_action_display()} {self.get_resource_display()} #{self.resource_id}"
-
 
 class DatasetShare(models.Model):
     dataset     = models.ForeignKey(
@@ -246,13 +259,12 @@ class DatasetShare(models.Model):
     def __str__(self):
         return f"{self.dataset.name} partilhado com {self.shared_with}"
 
-
 class DatasetFavorite(models.Model):
-    user    = models.ForeignKey(
+    user      = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
         related_name='favorites'
     )
-    dataset = models.ForeignKey(
+    dataset   = models.ForeignKey(
         Dataset, on_delete=models.CASCADE,
         related_name='favorited_by'
     )

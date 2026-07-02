@@ -16,6 +16,8 @@ from datasets.audit import audit, audit_dataset_changes
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.hashers import make_password
+from .models import ApiKey
 
 logger = logging.getLogger('accounts')
 
@@ -108,14 +110,26 @@ def datasets(request):
     })
 
 @login_required
-def manage_api_keys(request):
-    return render(request, 'frontend/api_keys/manage.html')
-
-@login_required
 def api_keys_api(request):
     if request.method == "POST":
-        return JsonResponse({'message': 'Ligação estabelecida com sucesso!'}, status=200)
-    return JsonResponse({'message': 'Apenas POST permitido'}, status=405)
+        data = json.loads(request.body)
+        name = data.get('name')
+        
+        # Gerar chave real
+        raw_key = secrets.token_hex(20)
+        
+        # Guardar apenas o hash para segurança
+        ApiKey.objects.create(
+            user=request.user,
+            name=name,
+            key_hash=make_password(raw_key),
+            key_prefix=raw_key[:8]
+        )
+        
+        return JsonResponse({'message': f'Chave gerada: {raw_key}'}, status=201)
+    
+    # Adicionar lógica GET para listar chaves aqui...
+    return JsonResponse({'error': 'Método não permitido'}, status=405)
 
 def login_view(request):
     if request.method == 'POST':

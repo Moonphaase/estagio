@@ -1,16 +1,75 @@
 {% extends 'frontend/base.html' %}
 {% block content %}
-<div class="container mx-auto p-8">
-    <h1 class="text-2xl font-bold">Gestão de API Keys</h1>
-    <p>O sistema está a ser configurado.</p>
-    <button onclick="testarApi()" class="bg-blue-500 text-white p-2 rounded mt-4">Testar Ligação</button>
+<div class="container mx-auto p-8 max-w-2xl">
+    <h1 class="text-2xl font-bold mb-6">Gestão de API Keys</h1>
+
+    <!-- Formulário para Criar -->
+    <div class="bg-white p-6 rounded shadow mb-8">
+        <h2 class="text-lg font-semibold mb-4">Gerar nova chave</h2>
+        <div class="flex gap-2">
+            <input type="text" id="keyName" placeholder="Nome da chave (ex: Projeto X)" 
+                   class="border p-2 flex-grow rounded">
+            <button onclick="gerarChave()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                Gerar
+            </button>
+        </div>
+    </div>
+
+    <!-- Lista de Chaves -->
+    <div class="bg-white p-6 rounded shadow">
+        <h2 class="text-lg font-semibold mb-4">As tuas chaves</h2>
+        <div id="listaChaves" class="space-y-2">
+            <p class="text-gray-500">A carregar...</p>
+        </div>
+    </div>
 </div>
 
 <script>
-async function testarApi() {
-    const res = await fetch('/api/auth/api-keys/', { method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token }}'} });
+// Carregar chaves ao iniciar
+window.onload = carregarChaves;
+
+async function carregarChaves() {
+    const res = await fetch('/api/auth/api-keys/');
+    const chaves = await res.json();
+    const lista = document.getElementById('listaChaves');
+    
+    if (chaves.length === 0) {
+        lista.innerHTML = '<p class="text-gray-500">Não tens chaves geradas.</p>';
+        return;
+    }
+
+    lista.innerHTML = chaves.map(k => `
+        <div class="flex justify-between items-center border-b p-2">
+            <span>${k.name} (<code>${k.key_prefix}****</code>)</span>
+            <button onclick="apagarChave(${k.id})" class="text-red-500 hover:text-red-700">Apagar</button>
+        </div>
+    `).join('');
+}
+
+async function gerarChave() {
+    const name = document.getElementById('keyName').value;
+    const res = await fetch('/api/auth/api-keys/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ name: name || 'Nova Chave' })
+    });
+    
     const data = await res.json();
     alert(data.message);
+    document.getElementById('keyName').value = '';
+    carregarChaves();
+}
+
+async function apagarChave(id) {
+    if (!confirm('Tens a certeza?')) return;
+    await fetch(`/api/auth/api-keys/${id}/`, {
+        method: 'DELETE',
+        headers: {'X-CSRFToken': '{{ csrf_token }}'}
+    });
+    carregarChaves();
 }
 </script>
 {% endblock %}
