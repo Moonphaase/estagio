@@ -7,12 +7,63 @@
     <p class="text-gray-600 mb-6">Gerencie as suas chaves de acesso para integração com a API.</p>
 
     <!-- Barra de Ação -->
-    <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6 flex items-center gap-4">
-        <input type="text" id="keyName" placeholder="Nome da chave..." class="border border-gray-300 rounded px-3 py-2 w-64">
-        <button onclick="createKey()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
-            + Adicionar Chave
-        </button>
-    </div>
+<div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6 flex items-center gap-4">
+    <input type="text" id="keyName" placeholder="Nome da chave..." class="border border-gray-300 rounded px-3 py-2 w-64">
+    <!-- Nome alterado para "Gerar Chave" -->
+    <button onclick="createKey()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+        Gerar Chave
+    </button>
+</div>
+
+<script>
+    async function createKey() {
+        const nameInput = document.getElementById('keyName');
+        const name = nameInput.value;
+        
+        if (!name) {
+            alert('Por favor, insira um nome para a chave.');
+            return;
+        }
+
+        const res = await fetch('/api/auth/api-keys/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json', 
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ name: name })
+        });
+        
+        if (res.ok) {
+            const data = await res.json();
+            alert('Chave gerada com sucesso! Copie agora:\n\n' + data.key);
+            nameInput.value = ''; // Limpa o campo
+            loadKeys(); // Recarrega a tabela
+        } else {
+            const errorData = await res.json();
+            alert('Erro ao gerar chave: ' + (errorData.detail || 'Tente novamente.'));
+        }
+    }
+
+    // Certifica-te que a função loadKeys() está definida abaixo conforme enviamos anteriormente
+    async function loadKeys() {
+        const response = await fetch('/api/auth/api-keys/');
+        const data = await response.json();
+        const tbody = document.getElementById('keysTableBody');
+        tbody.innerHTML = data.map(key => `
+            <tr class="border-b">
+                <td class="px-6 py-4">${key.name}</td>
+                <td class="px-6 py-4">${key.key_prefix}</td>
+                <td class="px-6 py-4 text-right">
+                    <button onclick="deleteKey(${key.id})" class="text-red-600 hover:text-red-800 font-medium">Eliminar</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    // Carrega as chaves ao iniciar
+    loadKeys();
+</script>
 
     <!-- Tabela estilizada -->
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
