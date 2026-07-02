@@ -88,15 +88,30 @@
     }
 
     // Função para eliminar chave
-    async function deleteKey(id) {
-        if (!confirm('Tem a certeza que deseja eliminar esta chave?')) return;
+   async function deleteKey(id) {
+    if (!confirm('Tem a certeza que deseja eliminar esta chave?')) return;
 
-        await fetch(`/api/auth/api-keys/${id}/`, {
+    try {
+        // Adicionamos a barra / final para garantir que o Django roteia corretamente
+        const res = await fetch(`/api/auth/api-keys/${id}/`, {
             method: 'DELETE',
-            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+            headers: { 
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            }
         });
-        loadKeys();
+
+        if (res.ok) {
+            loadKeys(); // Recarrega a tabela após sucesso
+        } else {
+            const errorData = await res.json().catch(() => ({}));
+            alert('Erro ao eliminar: ' + (errorData.detail || 'Falha no servidor.'));
+        }
+    } catch (error) {
+        console.error('Erro na requisição:', error);
+        alert('Erro de conexão.');
     }
+}
 
     // Carregar dados ao iniciar
     loadKeys();
