@@ -52,7 +52,18 @@
                     <option value="pendente" {% if request.GET.estado == 'pendente' %}selected{% endif %}>Pendente</option>
                 </select>
             </div>
-            <div class="flex items-center gap-2">
+            
+            <!-- Bloco de Ações de Filtro Atualizado com o Botão Guardados -->
+            <div class="flex items-center gap-2 whitespace-nowrap">
+                <!-- BOTÃO GUARDADOS -->
+                <label class="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-50 transition-all select-none {% if request.GET.favorites == 'true' %}bg-red-50/80 border-red-200 text-red-700{% endif %}">
+                    <input type="checkbox" name="favorites" value="true" class="sr-only" onchange="this.form.submit()" {% if request.GET.favorites == 'true' %}checked{% endif %}>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 {% if request.GET.favorites == 'true' %}text-red-500 fill-current{% else %}text-gray-400 fill-none stroke-current stroke-2{% endif %}" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                    <span>Guardados</span>
+                </label>
+
                 <button type="submit" class="flex-1 inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-all shadow-xs">Filtrar</button>
                 <a href="{% url 'datasets' %}" class="flex-1 inline-flex items-center justify-center px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-all shadow-3xs">Limpar</a>
             </div>
@@ -79,44 +90,44 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100 text-sm text-gray-600">
     
-    {% for dataset in datasets %}
-    <tr class="hover:bg-gray-50/50 transition-colors">
-        <td class="px-6 py-4 font-semibold text-gray-950">
-            <a href="{% url 'dataset_detail' dataset.id %}" class="hover:text-blue-600 transition-colors">
-                {{ dataset }}
-            </a>
-        </td>
-        <td class="px-6 py-4 text-gray-500">
-            {{ dataset.category|default:"—" }}
-        </td>
-        <td class="px-6 py-4">
-            <span class="inline-flex items-center text-xs font-medium px-2.5 py-0.5 rounded bg-green-50 text-green-700 border border-green-100">
-                {{ dataset.visibility|default:"Público" }}
-            </span>
-        </td>
-        <td class="px-6 py-4">
-            <span class="inline-flex items-center text-xs font-medium px-2.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">
-                {{ dataset.status|default:"Publicado" }}
-            </span>
-        </td>
-        <td class="px-6 py-4 text-gray-500">
-            {{ dataset.created_at|date:"d/m/Y"|default:"—" }}
-        </td>
-        
-        <td class="px-6 py-4 text-right space-x-3 whitespace-nowrap">
-            <a href="{% url 'dataset_detail' dataset.id %}" class="text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors">Ver</a>
-            <a href="{% url 'dataset_edit' dataset.id %}" class="text-sm font-semibold text-amber-600 hover:text-amber-700 transition-colors">Editar</a>
-        </td>
-    </tr>
-    {% empty %}
-    <tr>
-        <td colspan="6" class="px-6 py-12 text-center text-sm text-gray-400">
-            Não foram encontrados conjuntos de dados correspondentes aos critérios.
-        </td>
-    </tr>
-    {% endfor %}
+                    {% for dataset in datasets %}
+                    <tr class="hover:bg-gray-50/50 transition-colors">
+                        <td class="px-6 py-4 font-semibold text-gray-950">
+                            <a href="{% url 'dataset_detail' dataset.id %}" class="hover:text-blue-600 transition-colors">
+                                {{ dataset }}
+                            </a>
+                        </td>
+                        <td class="px-6 py-4 text-gray-500">
+                            {{ dataset.category|default:"—" }}
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="inline-flex items-center text-xs font-medium px-2.5 py-0.5 rounded bg-green-50 text-green-700 border border-green-100">
+                                {{ dataset.visibility|default:"Público" }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="inline-flex items-center text-xs font-medium px-2.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">
+                                {{ dataset.status|default:"Publicado" }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-gray-500">
+                            {{ dataset.created_at|date:"d/m/Y"|default:"—" }}
+                        </td>
+                        
+                        <td class="px-6 py-4 text-right space-x-3 whitespace-nowrap">
+                            <a href="{% url 'dataset_detail' dataset.id %}" class="text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors">Ver</a>
+                            <a href="{% url 'dataset_edit' dataset.id %}" class="text-sm font-semibold text-amber-600 hover:text-amber-700 transition-colors">Editar</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center text-sm text-gray-400">
+                            Não foram encontrados conjuntos de dados correspondentes aos critérios.
+                        </td>
+                    </tr>
+                    {% endfor %}
 
-</tbody>
+                </tbody>
             </table>
         </div>
     </div>
