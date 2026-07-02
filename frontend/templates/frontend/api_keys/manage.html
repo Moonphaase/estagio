@@ -7,8 +7,7 @@
     <div class="bg-white p-6 rounded shadow mb-8">
         <h2 class="text-lg font-semibold mb-4">Gerar nova chave</h2>
         <div class="flex gap-2">
-            <input type="text" id="keyName" placeholder="Nome da chave (ex: Projeto X)" 
-                   class="border p-2 flex-grow rounded">
+            <input type="text" id="keyName" placeholder="Nome da chave" class="border p-2 flex-grow rounded">
             <button onclick="gerarChave()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
                 Gerar
             </button>
@@ -25,30 +24,27 @@
 </div>
 
 <script>
-// Carregar chaves ao iniciar
 window.onload = carregarChaves;
 
 async function carregarChaves() {
     try {
         const res = await fetch('/api/auth/api-keys/');
-        if (!res.ok) throw new Error(`Erro: ${res.status}`);
         const chaves = await res.json();
-        
         const lista = document.getElementById('listaChaves');
+        
         if (chaves.length === 0) {
             lista.innerHTML = '<p class="text-gray-500">Não tens chaves geradas.</p>';
         } else {
-            // Removida a censura (****) mantendo apenas o key_prefix
             lista.innerHTML = chaves.map(k => `
                 <div class="flex justify-between items-center border-b p-2">
-                    <span>${k.name} (<code>${k.key_prefix}</code>)</span>
+                    <!-- Se existir a chave completa no localStorage, usa-a, senão usa o prefixo -->
+                    <span>${k.name} (<code>${localStorage.getItem('key_' + k.id) || k.key_prefix}</code>)</span>
                     <button onclick="apagarChave(${k.id})" class="text-red-500">Apagar</button>
                 </div>
             `).join('');
         }
     } catch (e) {
-        console.error("Erro ao carregar:", e);
-        document.getElementById('listaChaves').innerHTML = '<p class="text-red-500">Erro ao carregar chaves. Vê a consola.</p>';
+        document.getElementById('listaChaves').innerHTML = '<p class="text-red-500">Erro ao carregar.</p>';
     }
 }
 
@@ -56,21 +52,25 @@ async function gerarChave() {
     const name = document.getElementById('keyName').value;
     const res = await fetch('/api/auth/api-keys/', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': '{{ csrf_token }}'
-        },
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
         body: JSON.stringify({ name: name || 'Nova Chave' })
     });
     
     const data = await res.json();
-    alert(data.message);
+    const chaveCompleta = data.message.split(': ')[1];
+    
+    // Guardamos a chave no localStorage para a mostrar enquanto a página estiver aberta
+    // Nota: isto não persiste após limpar o histórico/cache do browser
+    localStorage.setItem('key_temp', chaveCompleta); 
+    
+    alert("Chave gerada: " + chaveCompleta);
     document.getElementById('keyName').value = '';
     carregarChaves();
 }
 
 async function apagarChave(id) {
     if (!confirm('Tens a certeza?')) return;
+    localStorage.removeItem('key_' + id); // Remove do armazenamento ao apagar
     await fetch(`/api/auth/api-keys/${id}/`, {
         method: 'DELETE',
         headers: {'X-CSRFToken': '{{ csrf_token }}'}
