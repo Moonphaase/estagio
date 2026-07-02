@@ -6,7 +6,7 @@ urlpatterns = [
     # ROTAS PRINCIPAIS E AUTENTICAÇÃO
     # ==========================================
     # 1. Página inicial (raiz) direciona para a lógica condicional (Sobre / Dashboard)
-    path('', views.dashboard, name='home'),
+    path('', views.home, name='home'),
     
     # 2. Rota própria do Painel Geral
     path('dashboard/', views.dashboard, name='dashboard'),
