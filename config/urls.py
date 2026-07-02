@@ -3,6 +3,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework_nested import routers
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from categories.views import CategoryViewSet
 from datasets.views   import DatasetViewSet, DatasetVersionViewSet
@@ -24,4 +25,8 @@ urlpatterns = [
     path("api-auth/", include("rest_framework.urls")),
     path("",          include("frontend.urls")),
     path('api/auth/api-keys/', include('api_keys.urls')),
+
+    # ── Documentação Swagger ──────────────────────────────────────────────────
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

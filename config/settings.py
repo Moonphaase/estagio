@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
+    'drf_spectacular',
     'storages',
     'core',
     'accounts',
@@ -73,11 +74,11 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME':     config('DB_NAME',     default='estagio'),
-        'USER':     config('DB_USER',     default='postgres'),
+        'NAME':    config('DB_NAME',    default='estagio'),
+        'USER':    config('DB_USER',    default='postgres'),
         'PASSWORD': config('DB_PASSWORD', default='chico'),
-        'HOST':     config('DB_HOST',     default='localhost'),
-        'PORT':     config('DB_PORT',     default='5432'),
+        'HOST':    config('DB_HOST',    default='localhost'),
+        'PORT':    config('DB_PORT',    default='5432'),
     }
 }
 
@@ -118,8 +119,6 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 USE_S3 = config('USE_S3', default=False, cast=bool)
 
 if USE_S3:
-    # Localmente usa HTTPS (endpoint público Railway)
-    # No Railway usa HTTP (endpoint interno .railway.internal)
     _use_https = config('MINIO_USE_HTTPS', default=False, cast=bool)
     _scheme    = 'https' if _use_https else 'http'
 
@@ -132,8 +131,8 @@ if USE_S3:
         },
     }
 
-    AWS_ACCESS_KEY_ID        = config('MINIO_ACCESS_KEY')
-    AWS_SECRET_ACCESS_KEY    = config('MINIO_SECRET_KEY')
+    AWS_ACCESS_KEY_ID      = config('MINIO_ACCESS_KEY')
+    AWS_SECRET_ACCESS_KEY  = config('MINIO_SECRET_KEY')
     AWS_STORAGE_BUCKET_NAME  = config('MINIO_BUCKET')
     AWS_S3_ENDPOINT_URL      = f"{_scheme}://{config('MINIO_ENDPOINT')}"
     AWS_S3_USE_SSL           = _use_https
@@ -147,7 +146,7 @@ else:
     MEDIA_URL  = '/media/'
     MEDIA_ROOT = BASE_DIR / 'media'
 
-# ── DRF ───────────────────────────────────────────────────────────────────────
+# ── DRF e Swagger ─────────────────────────────────────────────────────────────
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -161,6 +160,13 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'core.pagination.StandardPagination',
     'PAGE_SIZE': 10,
     'EXCEPTION_HANDLER': 'core.exceptions.custom_exception_handler',
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Dataset Manager API',
+    'DESCRIPTION': 'Documentação oficial da API para gestão de datasets, versões e categorias.',
+    'VERSION': '1.0.0',
 }
 
 # ── Simple JWT ────────────────────────────────────────────────────────────────
