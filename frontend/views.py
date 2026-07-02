@@ -15,6 +15,11 @@ from datasets.audit import audit, audit_dataset_changes
 logger = logging.getLogger('accounts')
 
 
+def home(request):
+    """Aponta a página inicial diretamente para a lógica do dashboard"""
+    return dashboard(request)
+
+
 def dashboard(request):
     if request.user.is_authenticated:
         is_guest = False
@@ -123,7 +128,6 @@ def register_view(request):
         email    = request.POST.get('email', '').strip()
         password = request.POST.get('password', '')
 
-        # Evita submissões com campos vazios que quebram o CustomUser
         if not username or not email or not password:
             return render(request, 'frontend/register.html', {'error': 'Todos os campos são obrigatórios.'})
 
@@ -191,7 +195,6 @@ def dataset_detail(request, id):
         is_guest = True
         is_owner = False
         is_favorited = False
-        # Visitante não pode ver datasets privados nem datasets que não estejam publicados
         if dataset.visibility == 'private' or dataset.status != 'published':
             messages.error(request, 'Este dataset não está disponível publicamente.')
             return redirect('dashboard')
@@ -755,15 +758,12 @@ def aprovacoes(request):
         messages.error(request, 'Não tens permissão.')
         return redirect('dashboard')
     
-    # Carrega os Datasets pendentes
     pendentes_qs = Dataset.objects.filter(status='pending').order_by('-created_at')
     
-    # Carrega os Utilizadores pendentes (is_active=False)
     from django.contrib.auth import get_user_model
     User = get_user_model()
     utilizadores_pendentes = User.objects.filter(is_active=False).order_by('-date_joined')
     
-    # Enviamos várias chaves para garantir compatibilidade com o teu template HTML
     return render(request, 'frontend/aprovacoes.html', {
         'pendentes': pendentes_qs,
         'datasets_pendentes': pendentes_qs,
