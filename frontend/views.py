@@ -104,7 +104,7 @@ def datasets(request):
 
 @login_required
 def manage_api_keys(request):
-    return render(request, 'frontend/api_keys_manage.html')
+    return render(request, 'frontend/api_keys/manage.html')
 
 def login_view(request):
     if request.method == 'POST':
