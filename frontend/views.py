@@ -110,26 +110,28 @@ def datasets(request):
     })
 
 @login_required
-def api_keys_api(request):
-    if request.method == "POST":
+def api_keys_api(request, id=None):
+    if request.method == "GET":
+        # Retorna a lista de chaves do utilizador
+        keys = ApiKey.objects.filter(user=request.user).values('id', 'name', 'key_prefix')
+        return JsonResponse(list(keys), safe=False)
+
+    elif request.method == "POST":
         data = json.loads(request.body)
-        name = data.get('name')
-        
-        # Gerar chave real
         raw_key = secrets.token_hex(20)
-        
-        # Guardar apenas o hash para segurança
         ApiKey.objects.create(
             user=request.user,
-            name=name,
+            name=data.get('name', 'Nova Chave'),
             key_hash=make_password(raw_key),
             key_prefix=raw_key[:8]
         )
-        
         return JsonResponse({'message': f'Chave gerada: {raw_key}'}, status=201)
-    
-    # Adicionar lógica GET para listar chaves aqui...
-    return JsonResponse({'error': 'Método não permitido'}, status=405)
+
+    elif request.method == "DELETE" and id:
+        ApiKey.objects.filter(id=id, user=request.user).delete()
+        return JsonResponse({'message': 'Chave eliminada'}, status=200)
+
+    return JsonResponse({'error': 'Método inválido'}, status=405)
 
 def login_view(request):
     if request.method == 'POST':
