@@ -11,6 +11,7 @@ Projeto desenvolvido em Django no âmbito de estágio/projeto académico.
 - Git & GitHub
 - Docker
 - MinIO
+- Swagger
 
 ## Instalação
 
