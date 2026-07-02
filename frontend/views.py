@@ -486,31 +486,37 @@ def version_create(request, id):
 @login_required
 def profile(request):
     if request.method == 'POST':
-        form_type = request.POST.get('form_type')
+        # Vamos verificar qual formulário foi enviado através do campo 'action'
+        action = request.POST.get('action')
 
-        if form_type == 'profile':
-            request.user.username   = request.POST.get('username')
-            request.user.email      = request.POST.get('email')
-            request.user.first_name = request.POST.get('first_name')
-            request.user.last_name  = request.POST.get('last_name')
-            request.user.save()
-            messages.success(request, 'Perfil updated com sucesso!')
+        if action == 'update_profile':
+            # Atualização de dados pessoais
+            user = request.user
+            user.username = request.POST.get('username', user.username)
+            user.email = request.POST.get('email', user.email)
+            user.first_name = request.POST.get('first_name', user.first_name)
+            user.last_name = request.POST.get('last_name', user.last_name)
+            user.save()
+            messages.success(request, 'Informações pessoais atualizadas com sucesso!')
 
-        elif form_type == 'password':
+        elif action == 'change_password':
+            # Alteração de password
             current = request.POST.get('current_password')
-            new     = request.POST.get('new_password')
+            new = request.POST.get('new_password')
             confirm = request.POST.get('confirm_password')
 
             if not request.user.check_password(current):
-                messages.error(request, 'Password atual incorreta.')
+                messages.error(request, 'A password atual está incorreta.')
             elif new != confirm:
-                messages.error(request, 'As passwords não coincidem.')
+                messages.error(request, 'As novas passwords não coincidem.')
             elif len(new) < 6:
                 messages.error(request, 'A nova password deve ter pelo menos 6 caracteres.')
             else:
                 request.user.set_password(new)
                 request.user.save()
-                login(request, request.user)
+                # É importante fazer o login novamente após mudar a password
+                from django.contrib.auth import update_session_auth_hash
+                update_session_auth_hash(request, request.user)
                 messages.success(request, 'Password alterada com sucesso!')
 
         return redirect('profile')
