@@ -794,17 +794,20 @@ def user_approve_action(request, id):
 def dataset_share(request, id):
     dataset = get_object_or_404(Dataset, id=id)
 
+    # Verifica permissões
     if dataset.owner != request.user and not request.user.is_staff:
         messages.error(request, 'Não tens permissão para partilhar este dataset.')
         return redirect('dataset_detail', dataset.id)
 
-    from django.contrib.auth import get_user_model
-    User = get_user_model()
-
+    # O bloco POST começa aqui
     if request.method == 'POST':
         email = request.POST.get('email', '').strip()
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        
         try:
             user_to_share = User.objects.get(email=email)
+            
             if user_to_share == dataset.owner:
                 messages.error(request, 'Não podes partilhar o dataset contigo próprio.')
             elif DatasetShare.objects.filter(dataset=dataset, shared_with=user_to_share).exists():
@@ -816,14 +819,11 @@ def dataset_share(request, id):
                     shared_by=request.user
                 )
                 messages.success(request, f'Dataset partilhado com {email}.')
+                
         except User.DoesNotExist:
             messages.error(request, f'Não existe nenhum utilizador com o email {email}.')
-
-    shares = DatasetShare.objects.filter(dataset=dataset).select_related('shared_with')
-    return render(request, 'frontend/dataset_share.html', {
-        'dataset': dataset,
-        'shares':  shares,
-    })
+            
+    return redirect('dataset_detail', dataset.id)
 
 
 @login_required
