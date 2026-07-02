@@ -22,16 +22,13 @@
     </div>
 
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <!-- Alterado para 12 colunas no desktop para um controlo de espaço perfeito -->
         <form method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 items-end">
             
-            <!-- Pesquisar (Ocupa 3 colunas) -->
             <div class="sm:col-span-2 lg:col-span-3 space-y-1.5">
                 <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Pesquisar</label>
                 <input type="text" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Nome ou descrição..." class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2 text-sm text-gray-700 placeholder-gray-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all outline-none">
             </div>
             
-            <!-- Categoria (Ocupa 2 colunas) -->
             <div class="space-y-1.5 lg:col-span-2">
                 <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Categoria</label>
                 <select name="categoria" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2 text-sm text-gray-700 focus:bg-white focus:border-blue-500 transition-all outline-none appearance-none cursor-pointer">
@@ -42,7 +39,6 @@
                 </select>
             </div>
             
-            <!-- Visibilidade (Ocupa 2 colunas) -->
             <div class="space-y-1.5 lg:col-span-2">
                 <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Visibilidade</label>
                 <select name="visibilidade" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2 text-sm text-gray-700 focus:bg-white focus:border-blue-500 transition-all outline-none appearance-none cursor-pointer">
@@ -52,7 +48,6 @@
                 </select>
             </div>
             
-            <!-- Estado (Ocupa 2 colunas) -->
             <div class="space-y-1.5 lg:col-span-2">
                 <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Estado</label>
                 <select name="estado" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2 text-sm text-gray-700 focus:bg-white focus:border-blue-500 transition-all outline-none appearance-none cursor-pointer">
@@ -62,26 +57,7 @@
                 </select>
             </div>
             
-            <!-- Botões de Ação (Ocupa 3 colunas para garantir que não quebra nem transborda) -->
             <div class="lg:col-span-3 flex items-center gap-2 whitespace-nowrap w-full">
-                <!-- BOTÃO GUARDADOS -->
-                <label class="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-50 transition-all select-none {% if request.GET.favorites == 'true' %}bg-red-50/80 border-red-200 text-red-700{% endif %}">
-                    <input type="checkbox" name="favorites" value="true" class="sr-only" onchange="this.form.submit()" {% if request.GET.favorites == 'true' %}checked{% endif %}>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 {% if request.GET.favorites == 'true' %}text-red-500 fill-current{% else %}text-gray-400 fill-none stroke-current stroke-2{% endif %}" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                    </svg>
-                    <span>Guardados</span>
-                </label>
-
-                <button type="submit" class="flex-1 inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-all shadow-xs">Filtrar</button>
-                <a href="{% url 'datasets' %}" class="flex-1 inline-flex items-center justify-center px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-all shadow-3xs">Limpar</a>
-            </div>
-        </form>
-    </div>
-            
-            <!-- Bloco de Ações de Filtro Atualizado com o Botão Guardados -->
-            <div class="flex items-center gap-2 whitespace-nowrap">
-                <!-- BOTÃO GUARDADOS -->
                 <label class="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-50 transition-all select-none {% if request.GET.favorites == 'true' %}bg-red-50/80 border-red-200 text-red-700{% endif %}">
                     <input type="checkbox" name="favorites" value="true" class="sr-only" onchange="this.form.submit()" {% if request.GET.favorites == 'true' %}checked{% endif %}>
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 {% if request.GET.favorites == 'true' %}text-red-500 fill-current{% else %}text-gray-400 fill-none stroke-current stroke-2{% endif %}" viewBox="0 0 24 24">
