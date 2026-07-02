@@ -52,20 +52,24 @@ async function carregarChaves() {
 }
 
 async function gerarChave() {
-    const name = document.getElementById('keyName').value;
+    const nome = document.getElementById('nomeChave').value;
     const res = await fetch('/api/auth/api-keys/', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': '{{ csrf_token }}'
-        },
-        body: JSON.stringify({ name: name || 'Nova Chave' })
+        body: JSON.stringify({ name: nome }),
+        headers: { 'Content-Type': 'application/json' }
     });
     
     const data = await res.json();
-    alert(data.message);
-    document.getElementById('keyName').value = '';
-    carregarChaves();
+    // A chave completa está na mensagem da resposta
+    const chaveCompleta = data.message.split(': ')[1]; 
+    
+    // Adiciona à lista visualmente sem censura
+    const lista = document.getElementById('listaChaves');
+    const novaDiv = document.createElement('div');
+    novaDiv.innerHTML = `<span>${nome} (${chaveCompleta})</span>`;
+    lista.appendChild(novaDiv);
+    
+    alert("Copiado: " + chaveCompleta);
 }
 
 async function apagarChave(id) {
