@@ -752,15 +752,18 @@ def aprovacoes(request):
         return redirect('dashboard')
     
     # Carrega os Datasets pendentes
-    pendentes = Dataset.objects.filter(status='pending').order_by('-created_at')
+    pendentes_qs = Dataset.objects.filter(status='pending').order_by('-created_at')
     
-    # NOVO: Carrega os Utilizadores pendentes (is_active=False)
+    # Carrega os Utilizadores pendentes (is_active=False)
     from django.contrib.auth import get_user_model
     User = get_user_model()
     utilizadores_pendentes = User.objects.filter(is_active=False).order_by('-date_joined')
     
+    # Enviamos várias chaves para garantir compatibilidade com o teu template HTML
     return render(request, 'frontend/aprovacoes.html', {
-        'pendentes': pendentes,
+        'pendentes': pendentes_qs,
+        'datasets_pendentes': pendentes_qs,  # <-- Muito provável que o teu HTML use isto
+        'datasets': pendentes_qs,           # <-- Caso o teu loop use {% for d in datasets %}
         'utilizadores_pendentes': utilizadores_pendentes,
     })
 
