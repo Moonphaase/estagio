@@ -65,4 +65,5 @@ urlpatterns = [
     path('aprovacoes/', views.aprovacoes, name='aprovacoes'),
     path('auditoria/', views.auditoria, name='auditoria'),
     path('aprovacoes/utilizador/<int:id>/aprovar/', views.user_approve_action, name='user_approve_action'),
+    path('api-keys/', views.manage_api_keys, name='manage_api_keys'),
 ]

@@ -102,6 +102,9 @@ def datasets(request):
         'is_guest':          is_guest,
     })
 
+@login_required
+def manage_api_keys(request):
+    return render(request, 'frontend/api_keys_manage.html')
 
 def login_view(request):
     if request.method == 'POST':
