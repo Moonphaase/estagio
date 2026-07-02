@@ -167,6 +167,7 @@ SPECTACULAR_SETTINGS = {
     'TITLE': 'Dataset Manager API',
     'DESCRIPTION': 'Documentação oficial da API para gestão de datasets, versões e categorias.',
     'VERSION': '1.0.0',
+    'PREPROCESSING_HOOKS': ['config.spectacular_hooks.only_get_methods'],
 }
 
 # ── Simple JWT ────────────────────────────────────────────────────────────────
