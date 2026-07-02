@@ -104,8 +104,8 @@ def datasets(request):
 
 def login_view(request):
     if request.method == 'POST':
-        email    = request.POST.get('email')
-        password = request.POST.get('password')
+        email    = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '')
         user     = authenticate(request, username=email, password=password)
         if user is not None:
             login(request, user)
@@ -119,9 +119,13 @@ def login_view(request):
 
 def register_view(request):
     if request.method == 'POST':
-        username = request.POST.get('username')
-        email    = request.POST.get('email')
-        password = request.POST.get('password')
+        username = request.POST.get('username', '').strip()
+        email    = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '')
+
+        # Evita submissões com campos vazios que quebram o CustomUser
+        if not username or not email or not password:
+            return render(request, 'frontend/register.html', {'error': 'Todos os campos são obrigatórios.'})
 
         from django.contrib.auth import get_user_model
         User = get_user_model()
@@ -339,7 +343,7 @@ def dataset_edit(request, id):
         changes = audit_dataset_changes(before, after)
         audit(request, "update", "dataset", dataset.id, f"Dataset '{dataset.name}' editado", changes=changes)
         logger.info(f'Dataset editado: "{dataset.name}" por {request.user.email}')
-        messages.success(request, 'Dataset updated com sucesso!')
+        messages.success(request, 'Dataset atualizado com sucesso!')
         return redirect('dataset_detail', dataset.id)
 
     tags_list = []
@@ -377,7 +381,7 @@ def dataset_versions(request, id):
 def logout_view(request):
     logger.info(f'Logout: {request.user.email if request.user.is_authenticated else "anonimo"}')
     logout(request)
-    return redirect('home') # Alterado de 'dashboard' para 'home'
+    return redirect('home')
 
 
 @login_required
@@ -493,7 +497,7 @@ def profile(request):
             request.user.first_name = request.POST.get('first_name')
             request.user.last_name  = request.POST.get('last_name')
             request.user.save()
-            messages.success(request, 'Perfil updated com sucesso!')
+            messages.success(request, 'Perfil atualizado com sucesso!')
 
         elif form_type == 'password':
             current = request.POST.get('current_password')
@@ -762,8 +766,8 @@ def aprovacoes(request):
     # Enviamos várias chaves para garantir compatibilidade com o teu template HTML
     return render(request, 'frontend/aprovacoes.html', {
         'pendentes': pendentes_qs,
-        'datasets_pendentes': pendentes_qs,  # <-- Muito provável que o teu HTML use isto
-        'datasets': pendentes_qs,           # <-- Caso o teu loop use {% for d in datasets %}
+        'datasets_pendentes': pendentes_qs,
+        'datasets': pendentes_qs,
         'utilizadores_pendentes': utilizadores_pendentes,
     })
 
@@ -822,40 +826,4 @@ def dataset_share(request, id):
     return render(request, 'frontend/dataset_share.html', {
         'dataset': dataset,
         'shares':  shares,
-    })
-
-
-@login_required
-def dataset_share_remove(request, id, share_id):
-    dataset = get_object_or_404(Dataset, id=id)
-
-    if dataset.owner != request.user and not request.user.is_staff:
-        messages.error(request, 'Não tens permissão.')
-        return redirect('dataset_detail', dataset.id)
-
-    if request.method == 'POST':
-        share = get_object_or_404(DatasetShare, id=share_id, dataset=dataset)
-        share.delete()
-        messages.success(request, 'Partilha removida.')
-
-    return redirect('dataset_share', dataset.id)
-
-
-def landing(request):
-    return render(request, 'frontend/landing.html')
-
-
-def about(request):
-    return render(request, 'frontend/about.html', {
-        'is_guest': not request.user.is_authenticated,
-    })
-
-def home(request):
-# Se o utilizador já estiver logado, vai direto para o dashboard
-    if request.user.is_authenticated:
-        return redirect('dashboard')
-    
-    # Se NÃO estiver logado, renderiza a página Sobre (about) diretamente na raiz do site
-    return render(request, 'frontend/about.html', {
-        'is_guest': True,
     })
