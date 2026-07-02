@@ -33,6 +33,7 @@ urlpatterns = [
     
     # Rota para a API de chaves
     path('api/auth/api-keys/', views.manage_api_keys, name='manage_api_keys'),
+    path('api/auth/api-keys/<int:id>/', views.manage_api_keys, name='manage_api_keys_delete'),
 
     # ── Documentação Swagger ──────────────────────────────────────────────────
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
