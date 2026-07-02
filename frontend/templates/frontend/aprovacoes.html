@@ -18,16 +18,17 @@
     <!-- Bloco Principal de Aprovações -->
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         
-        <!-- Topo com Contador Integrado -->
+        <!-- Topo com Contador Integrado Dinâmico -->
         <div class="px-6 py-4.5 border-b border-gray-100 flex items-center justify-between bg-gray-50/30">
             <h2 class="text-sm font-bold text-gray-900 tracking-tight">Datasets pendentes de aprovação</h2>
-            <!-- Pílula de contagem dinâmica (Exemplo baseado na image_57973f.png que mostra 0) -->
-            <span class="text-xs font-medium text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">0 pendente(s)</span>
+            <span class="text-xs font-medium text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">
+                {{ datasets_pendentes.count }} pendente(s)
+            </span>
         </div>
 
-        <!-- Lógica Condicional do Teu Backend (Django) -->
+        <!-- Lógica Condicional do Backend (Django) -->
         {% if datasets_pendentes %}
-            <!-- Tabela para quando existem dados -->
+            <!-- Tabela Dinâmica -->
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead>
@@ -40,36 +41,54 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 text-sm text-gray-600">
-                        <!-- Exemplo de Linha Ativa (Usa isto no teu ciclo for) -->
-                        <tr class="hover:bg-gray-50/50 transition-colors">
-                            <td class="px-6 py-4 font-semibold text-gray-950">Dataset de Teste</td>
-                            <td class="px-6 py-4 text-gray-500">utilizador_exemplo</td>
-                            <td class="px-6 py-4">
-                                <span class="bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded border border-gray-200/50">Saúde</span>
-                            </td>
-                            <td class="px-6 py-4 text-gray-500">30/06/2026</td>
-                            <td class="px-6 py-4 text-right flex items-center justify-end gap-2.5">
-                                <button class="text-xs font-semibold text-green-600 hover:bg-green-50 px-2.5 py-1.5 rounded-lg border border-transparent hover:border-green-100 transition-all">
-                                    Aprovar
-                                </button>
-                                <button class="text-xs font-semibold text-red-600 hover:bg-red-50 px-2.5 py-1.5 rounded-lg border border-transparent hover:border-red-100 transition-all">
-                                    Rejeitar
-                                </button>
-                            </td>
-                        </tr>
+                        {% for dataset in datasets_pendentes %}
+                            <tr class="hover:bg-gray-50/50 transition-colors">
+                                <td class="px-6 py-4 font-semibold text-gray-950">{{ dataset.name }}</td>
+                                <td class="px-6 py-4 text-gray-500">
+                                    {% if dataset.owner.username %}{{ dataset.owner.username }}{% else %}{{ dataset.owner }}{% endif %}
+                                </td>
+                                <td class="px-6 py-4">
+                                    {% if dataset.category %}
+                                        <span class="bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded border border-gray-200/50">
+                                            {{ dataset.category.name }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-xs text-gray-400 italic">Sem categoria</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 text-gray-500">{{ dataset.created_at|date:"d/m/Y" }}</td>
+                                <td class="px-6 py-4 text-right flex items-center justify-end gap-2.5">
+                                    
+                                    <!-- Formulário Seguro para APROVAR -->
+                                    <form method="POST" action="{% url 'dataset_approve' dataset.id %}" class="inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="text-xs font-semibold text-green-600 hover:bg-green-50 px-2.5 py-1.5 rounded-lg border border-transparent hover:border-green-100 transition-all cursor-pointer">
+                                            Aprovar
+                                        </button>
+                                    </form>
+
+                                    <!-- Formulário Seguro para REJEITAR (com confirmação em JavaScript) -->
+                                    <form method="POST" action="{% url 'dataset_reject' dataset.id %}" class="inline" onsubmit="return confirm('Tens a certeza que desejas rejeitar o dataset &quot;{{ dataset.name }}&quot;?')">
+                                        {% csrf_token %}
+                                        <button type="submit" class="text-xs font-semibold text-red-600 hover:bg-red-50 px-2.5 py-1.5 rounded-lg border border-transparent hover:border-red-100 transition-all cursor-pointer">
+                                            Rejeitar
+                                        </button>
+                                    </form>
+
+                                </td>
+                            </tr>
+                        {% endfor %}
                     </tbody>
                 </table>
             </div>
         {% else %}
-            <!-- Estado Vazio Modernizado (Cenário atual da image_57973f.png) -->
+            <!-- Estado Vazio Modernizado -->
             <div class="flex flex-col items-center justify-center text-center px-6 py-16 sm:py-24">
-                <!-- Ícone Ilustrativo Minimalista -->
                 <div class="w-14 h-14 bg-gray-50 text-gray-400 rounded-2xl flex items-center justify-center border border-gray-100 mb-4 shadow-3xs">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 002 2h2a2 2 0 002-2m-6 9l2 2 4-4" />
                     </svg>
                 </div>
-                <!-- Mensagens -->
                 <h3 class="text-base font-bold text-gray-900 tracking-tight">Tudo em ordem por aqui!</h3>
                 <p class="text-sm text-gray-400 mt-1 max-w-sm">Não há datasets pendentes de aprovação neste momento.</p>
             </div>
