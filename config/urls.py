@@ -32,9 +32,8 @@ urlpatterns = [
     path('api-keys/', views.manage_api_keys, name='manage_api_keys'),
     
     # Rota para a API de chaves
-    path('api-keys/', views.manage_api_keys_view, name='manage_api_keys'), # Página HTML
-    path('api/auth/api-keys/', views.api_keys_data, name='api_keys_data'),   # Dados JSON para o JS
-    path('api/auth/api-keys/<int:id>/', views.api_keys_data, name='api_keys_data_delete'),
+    path('api/auth/api-keys/', views.manage_api_keys, name='manage_api_keys'),
+    path('api/auth/api-keys/<int:id>/', views.manage_api_keys, name='manage_api_keys_delete'),
 
     # ── Documentação Swagger ──────────────────────────────────────────────────
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
