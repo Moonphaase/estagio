@@ -7,7 +7,7 @@
     <form method="POST">
         {% csrf_token %}
         <div class="mb-4">
-            <label class="block text-xs text-gray-500 mb-1">Nome</label>
+            <label class="block text-xs text-gray-500 mb-1">Nome <span class="text-red-500">*</span></label>
             <input type="text" name="name" class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400" placeholder="Ex: População de Lisboa 2024" required>
         </div>
         <div class="mb-4">
@@ -15,8 +15,8 @@
             <textarea name="description" rows="3" class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400" placeholder="Descreve o dataset..."></textarea>
         </div>
         <div class="mb-4">
-            <label class="block text-xs text-gray-500 mb-1">Categoria</label>
-            <select name="category" class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400">
+            <label class="block text-xs text-gray-500 mb-1">Categoria <span class="text-red-500">*</span></label>
+            <select name="category" class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400" required>
                 <option value="">Seleciona uma categoria</option>
                 {% for category in categories %}
                     <option value="{{ category.id }}">{{ category.name }}</option>
