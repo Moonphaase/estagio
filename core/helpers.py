@@ -4,7 +4,11 @@ from django.core.exceptions import ValidationError
 from django.utils.text import slugify
 import uuid
 
-ALLOWED_EXTENSIONS = ['.csv', '.json', '.xlsx', '.parquet', '.zip']
+# Adicionadas extensões de imagem (exceto .gif)
+ALLOWED_EXTENSIONS = [
+    '.csv', '.json', '.xlsx', '.parquet', '.zip', 
+    '.jpg', '.jpeg', '.png', '.svg'
+]
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
 
 
