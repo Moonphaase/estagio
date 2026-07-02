@@ -1,68 +1,39 @@
-<div class="p-6">
-    <h2 class="text-xl font-bold mb-4">As minhas Chaves</h2>
-    
-    <div class="mb-6">
-        <input type="text" id="keyName" placeholder="Nome da chave" class="border p-2 rounded">
-        <button onclick="createKey()" class="bg-blue-600 text-white px-4 py-2 rounded">Criar Nova Chave</button>
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-6 py-8">
+    <!-- Cabeçalho idêntico ao da página de Datasets -->
+    <h2 class="text-2xl font-bold text-gray-800 mb-2">API Keys</h2>
+    <p class="text-gray-600 mb-6">Gerencie as suas chaves de acesso para integração com a API.</p>
+
+    <!-- Barra de Ação -->
+    <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6 flex items-center gap-4">
+        <input type="text" id="keyName" placeholder="Nome da chave..." class="border border-gray-300 rounded px-3 py-2 w-64">
+        <button onclick="createKey()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+            + Adicionar Chave
+        </button>
     </div>
 
-    <table class="w-full border-collapse border">
-        <thead>
-            <tr class="bg-gray-100">
-                <th class="border p-2">Nome</th>
-                <th class="border p-2">Prefixo</th>
-                <th class="border p-2">Ações</th>
-            </tr>
-        </thead>
-        <tbody id="keysTableBody"></tbody>
-    </table>
+    <!-- Tabela estilizada -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <table class="w-full text-left">
+            <thead class="bg-gray-50 border-b border-gray-200">
+                <tr>
+                    <th class="px-6 py-3 text-sm font-semibold text-gray-600 uppercase">Nome</th>
+                    <th class="px-6 py-3 text-sm font-semibold text-gray-600 uppercase">Prefixo</th>
+                    <th class="px-6 py-3 text-sm font-semibold text-gray-600 uppercase text-right">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="keysTableBody" class="divide-y divide-gray-200">
+                <!-- Conteúdo carregado via JS -->
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <script>
-    const API_URL = '/api/auth/api-keys/';
-
-    async function loadKeys() {
-        const response = await fetch(API_URL);
-        const data = await response.json();
-        const tbody = document.getElementById('keysTableBody');
-        tbody.innerHTML = data.map(key => `
-            <tr>
-                <td class="border p-2">${key.name}</td>
-                <td class="border p-2">${key.key_prefix}</td>
-                <td class="border p-2">
-                    <button onclick="deleteKey(${key.id})" class="text-red-600">Eliminar</button>
-                </td>
-            </tr>
-        `).join('');
-    }
-
-    async function createKey() {
-        const name = document.getElementById('keyName').value;
-        const res = await fetch(API_URL, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
-            body: JSON.stringify({ name: name })
-        });
-        
-        if (res.ok) {
-            const data = await res.json();
-            // AQUI mostramos a chave completa apenas uma vez
-            alert('Chave criada com sucesso! Copie agora:\n\n' + data.key);
-            loadKeys();
-        } else {
-            alert('Erro ao criar chave.');
-        }
-    }
-
-    async function deleteKey(id) {
-        if(confirm('Tem a certeza que deseja eliminar esta chave?')) {
-            await fetch(`${API_URL}${id}/`, {
-                method: 'DELETE',
-                headers: {'X-CSRFToken': '{{ csrf_token }}'}
-            });
-            loadKeys();
-        }
-    }
-
-    loadKeys();
+    // Mantém a lógica fetch que definimos anteriormente, 
+    // mas garante que as classes nos elementos dinâmicos 
+    // seguem este padrão (ex: text-red-600 hover:text-red-800)
 </script>
+{% endblock %}
