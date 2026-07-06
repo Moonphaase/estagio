@@ -10,7 +10,7 @@ class IsAdminOrReadOnly(permissions.BasePermission):
         return request.user and request.user.is_staff
 
 
-class CategoryViewSet(viewsets.ModelViewSet):
+class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     queryset           = Category.objects.all()
     serializer_class   = CategorySerializer
