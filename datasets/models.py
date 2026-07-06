@@ -24,7 +24,8 @@ class ApiKey(models.Model):
     key_full = models.CharField(max_length=128) # Guardar a chave completa aqui
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField() # Nova data de expiração
-    is_active = models.BooleanField(default=True) # Para controlar o estado
+    expires_at = models.DateTimeField(null=True, blank=True) 
+    is_active = models.BooleanField(default=True)
 
     def save(self, *args, **kwargs):
         # Verifica se a chave expirou antes de salvar
