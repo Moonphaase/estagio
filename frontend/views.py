@@ -120,36 +120,33 @@ def manage_api_keys(request):
 @login_required
 def api_keys_api(request, id=None):
     if request.method == "GET":
-        # Desativa automaticamente chaves expiradas antes de listar
+        # Desativa automaticamente chaves expiradas
         ApiKey.objects.filter(expires_at__lt=timezone.now(), is_active=True).update(is_active=False)
-        
-        # Busca as chaves do utilizador, incluindo o estado e validade
-        keys = ApiKey.objects.filter(user=request.user).values(
-            'id', 'name', 'key_full', 'expires_at', 'is_active'
-        )
+        keys = ApiKey.objects.filter(user=request.user).values('id', 'name', 'key_full', 'expires_at', 'is_active')
         return JsonResponse(list(keys), safe=False)
 
     elif request.method == "POST":
-        data = json.loads(request.body)
-        raw_key = secrets.token_hex(20)
-        
-        # Processa a data de expiração enviada pelo frontend
-        expiry_str = data.get('expires_at')
         try:
-            # Converte a string 'YYYY-MM-DD' para objeto datetime com timezone
-            expiry_date = datetime.strptime(expiry_str, '%Y-%m-%d').replace(tzinfo=timezone.utc)
-        except (ValueError, TypeError):
-            return JsonResponse({'error': 'Data de expiração inválida'}, status=400)
-        
-        # Cria a chave com a data de validade
-        ApiKey.objects.create(
-            user=request.user,
-            name=data.get('name', 'Nova Chave'),
-            key_full=raw_key,
-            expires_at=expiry_date,
-            is_active=True
-        )
-        return JsonResponse({'message': f'Chave gerada: {raw_key}'}, status=201)
+            data = json.loads(request.body)
+            raw_key = secrets.token_hex(20)
+            expiry_str = data.get('expires_at')
+            
+            # Converte a string para objeto datetime simples
+            naive_dt = datetime.strptime(expiry_str, '%Y-%m-%d')
+            
+            # Torna a data "aware" usando o fuso horário atual do servidor (evita o erro do UTC)
+            expiry_date = timezone.make_aware(naive_dt)
+            
+            ApiKey.objects.create(
+                user=request.user,
+                name=data.get('name', 'Nova Chave'),
+                key_full=raw_key,
+                expires_at=expiry_date,
+                is_active=True
+            )
+            return JsonResponse({'message': f'Chave gerada: {raw_key}'}, status=201)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
 
     elif request.method == "DELETE" and id:
         ApiKey.objects.filter(id=id, user=request.user).delete()
