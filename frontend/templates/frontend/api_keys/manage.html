@@ -29,6 +29,11 @@
 <script>
 window.onload = carregarChaves;
 
+// Retorna o token CSRF injetado pelo Django de forma segura
+function getCsrfToken() {
+    return '{{ csrf_token }}';
+}
+
 async function carregarChaves() {
     const res = await fetch('/api/auth/api-keys/');
     const chaves = await res.json();
@@ -58,11 +63,9 @@ async function carregarChaves() {
 }
 
 async function gerarChave() {
-    // 1. Garante que os IDs coincidem com o teu HTML
     const nome = document.getElementById('keyName').value; 
     const data = document.getElementById('expiryDate').value;
 
-    // Validação simples
     if (!nome) {
         alert("Por favor, dá um nome à chave.");
         return;
@@ -73,20 +76,20 @@ async function gerarChave() {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken') // Importante se o Django pedir CSRF
+                'X-CSRFToken': getCsrfToken() 
             },
             body: JSON.stringify({ 
-                name: nome,        // Certifica-te que aqui usas a mesma variável definida acima
+                name: nome,
                 expires_at: data 
             })
         });
 
         if (response.ok) {
             alert("Chave gerada com sucesso!");
-            location.reload(); // Recarrega para mostrar a nova chave
+            location.reload(); 
         } else {
             const errorData = await response.json();
-            alert("Erro: " + errorData.error);
+            alert("Erro: " + (errorData.error || "Ocorreu um problema ao gerar a chave."));
         }
     } catch (err) {
         console.error("Erro ao gerar:", err);
@@ -97,7 +100,7 @@ async function apagarChave(id) {
     if (!confirm('Tens a certeza que queres eliminar esta chave?')) return;
     await fetch(`/api/auth/api-keys/${id}/`, {
         method: 'DELETE',
-        headers: {'X-CSRFToken': '{{ csrf_token }}'}
+        headers: {'X-CSRFToken': getCsrfToken()}
     });
     carregarChaves();
 }
