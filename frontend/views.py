@@ -125,26 +125,26 @@ def api_keys_api(request, id=None):
     elif request.method == "POST":
         try:
             data = json.loads(request.body)
-            raw_key = secrets.token_hex(20)
             expiry_str = data.get('expires_at')
             
-            # Converte a string para objeto datetime simples
-            naive_dt = datetime.strptime(expiry_str, '%Y-%m-%d')
-            
-            # Torna a data "aware" usando o fuso horário atual do servidor (evita o erro do UTC)
-            expiry_date = datetime.strptime(expiry_str, '%Y-%m-%d').replace(tzinfo=dt_timezone.utc)
+            # Se a data estiver vazia, define uma data padrão (ex: daqui a 30 dias)
+            if not expiry_str:
+                expiry_date = timezone.now() + timezone.timedelta(days=30)
+            else:
+                naive_dt = datetime.strptime(expiry_str, '%Y-%m-%d')
+                expiry_date = timezone.make_aware(naive_dt)
             
             ApiKey.objects.create(
                 user=request.user,
                 name=data.get('name', 'Nova Chave'),
-                key_full=raw_key,
+                key_full=secrets.token_hex(20),
                 expires_at=expiry_date,
                 is_active=True
             )
-            return JsonResponse({'message': f'Chave gerada: {raw_key}'}, status=201)
+            return JsonResponse({'message': 'Chave gerada com sucesso!'}, status=201)
         except Exception as e:
+            print(f"Erro na geração: {e}") # Verifica isto nos logs do Railway
             return JsonResponse({'error': str(e)}, status=400)
-
     elif request.method == "DELETE" and id:
         ApiKey.objects.filter(id=id, user=request.user).delete()
         return JsonResponse({'message': 'Chave eliminada'}, status=200)
