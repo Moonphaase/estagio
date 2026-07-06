@@ -10,21 +10,22 @@ class APIKeyAuthentication(authentication.BaseAuthentication):
         if not auth:
             return None
             
-        # Extrai a chave (exemplo: "Token 123")
+        # Tenta extrair a chave
         try:
+            # Assume o formato "Token <chave>"
             key = auth.split(' ')[1]
         except IndexError:
             raise exceptions.AuthenticationFailed('Formato de autorização inválido.')
 
-        # Tenta buscar a chave
         try:
             api_key = APIKey.objects.get(key_full=key)
         except APIKey.DoesNotExist:
-            # AQUI ESTÁ O ERRO: Se a chave "1" não existe, o sistema TEM de parar aqui
+            # Se a chave não existe, bloqueia imediatamente
             raise exceptions.AuthenticationFailed('Chave inexistente.')
 
-        # Verificação de expiração
-        if api_key.expires_at and api_key.expires_at < timezone.now().date():
+        # Verificação rigorosa de data
+        hoje = timezone.now().date()
+        if api_key.expires_at and api_key.expires_at < hoje:
             raise exceptions.AuthenticationFailed('Esta chave expirou.')
 
         return (api_key.user, api_key)
