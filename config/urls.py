@@ -23,7 +23,6 @@ urlpatterns = [
     path("api/auth/", include("accounts.urls")),
     path("api/",       include(router.urls)),
     path("api/",       include(datasets_router.urls)),
-    path("api-auth/", include("rest_framework.urls")),
     
     # ── Frontend Rotas ────────────────────────────────────────────────────────
     path("",           include("frontend.urls")),
@@ -33,7 +32,7 @@ urlpatterns = [
     
     # Rota para a API de chaves
     path('api/auth/api-keys/', views.api_keys_api, name='api_keys_api'),
-path('api/auth/api-keys/<int:id>/', views.api_keys_api, name='api_keys_api_delete'),
+    path('api/auth/api-keys/<int:id>/', views.api_keys_api, name='api_keys_api_delete'),
 
     # ── Documentação Swagger ──────────────────────────────────────────────────
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
