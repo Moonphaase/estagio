@@ -60,6 +60,8 @@ async function carregarChaves() {
 async function gerarChave() {
     const name = document.getElementById('keyName').value;
     const expires_at = document.getElementById('expiryDate').value;
+
+    console.log("A enviar para o servidor:", { name: nome, expires_at: data });
     
     if (!expires_at) {
         alert("Por favor, seleciona uma data de expiração.");
