@@ -1,6 +1,6 @@
 from rest_framework import authentication, exceptions
 from django.utils import timezone
-from api_keys.models import APIKey
+from datasets.models import APIKey
 
 class APIKeyAuthentication(authentication.BaseAuthentication):
     def authenticate(self, request):
