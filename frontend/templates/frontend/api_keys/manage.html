@@ -93,10 +93,11 @@ async function carregarChaves() {
         }
 
         lista.innerHTML = chaves.map(k => {
-            // A lógica de expiração agora considera 'hoje' como expirada
             const hoje = new Date().toISOString().split('T')[0];
             const dataExp = k.expires_at ? k.expires_at.split('T')[0] : null;
-            const expirada = dataExp ? dataExp <= hoje : false;
+            
+            // Alterado de "<=" para "<" para que o dia de hoje seja considerado "Ativa"
+            const expirada = dataExp ? dataExp < hoje : false;
             
             const estado = expirada ? 'Expirada' : 'Ativa';
             const cor = expirada ? 'text-red-600' : 'text-green-600';
