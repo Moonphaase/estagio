@@ -117,8 +117,6 @@ def manage_api_keys(request):
 @login_required
 def api_keys_api(request, id=None):
     if request.method == "GET":
-        if request.user.expires_at and request.user.expires_at < timezone.now():
-            return JsonResponse({'error': 'A tua conta expirou. Contacta o administrador.'}, status=403)
         # Desativa automaticamente chaves expiradas
         ApiKey.objects.filter(expires_at__lt=timezone.now(), is_active=True).update(is_active=False)
         keys = ApiKey.objects.filter(user=request.user).values('id', 'name', 'key_full', 'expires_at', 'is_active')
