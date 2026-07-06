@@ -58,36 +58,38 @@ async function carregarChaves() {
 }
 
 async function gerarChave() {
-    const name = document.getElementById('keyName').value;
-    const expires_at = document.getElementById('expiryDate').value;
+    // 1. Garante que os IDs coincidem com o teu HTML
+    const nome = document.getElementById('keyName').value; 
+    const data = document.getElementById('expiryDate').value;
 
-    console.log("A enviar para o servidor:", { name: nome, expires_at: data });
-    
-    if (!expires_at) {
-        alert("Por favor, seleciona uma data de expiração.");
+    // Validação simples
+    if (!nome) {
+        alert("Por favor, dá um nome à chave.");
         return;
     }
 
-    const res = await fetch('/api/auth/api-keys/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json', 
-            'X-CSRFToken': '{{ csrf_token }}'
-        },
-        body: JSON.stringify({ 
-            name: name || 'Nova Chave', 
-            expires_at: expires_at 
-        })
-    });
-    
-    const data = await res.json();
-    if (res.ok) {
-        alert(data.message);
-        document.getElementById('keyName').value = '';
-        document.getElementById('expiryDate').value = '';
-        carregarChaves();
-    } else {
-        alert("Erro: " + data.error);
+    try {
+        const response = await fetch('/api/auth/api-keys/', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken') // Importante se o Django pedir CSRF
+            },
+            body: JSON.stringify({ 
+                name: nome,        // Certifica-te que aqui usas a mesma variável definida acima
+                expires_at: data 
+            })
+        });
+
+        if (response.ok) {
+            alert("Chave gerada com sucesso!");
+            location.reload(); // Recarrega para mostrar a nova chave
+        } else {
+            const errorData = await response.json();
+            alert("Erro: " + errorData.error);
+        }
+    } catch (err) {
+        console.error("Erro ao gerar:", err);
     }
 }
 
