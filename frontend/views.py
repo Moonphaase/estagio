@@ -18,6 +18,8 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import make_password
 from datasets.models import ApiKey
+from django.utils import timezone
+from datetime import datetime
 
 logger = logging.getLogger('accounts')
 
@@ -116,19 +118,34 @@ def manage_api_keys(request):
 @login_required
 def api_keys_api(request, id=None):
     if request.method == "GET":
-        # Agora buscamos o campo 'key_full' em vez do prefixo
-        keys = ApiKey.objects.filter(user=request.user).values('id', 'name', 'key_full')
+        # Desativa automaticamente chaves expiradas antes de listar
+        ApiKey.objects.filter(expires_at__lt=timezone.now(), is_active=True).update(is_active=False)
+        
+        # Busca as chaves do utilizador, incluindo o estado e validade
+        keys = ApiKey.objects.filter(user=request.user).values(
+            'id', 'name', 'key_full', 'expires_at', 'is_active'
+        )
         return JsonResponse(list(keys), safe=False)
 
     elif request.method == "POST":
         data = json.loads(request.body)
         raw_key = secrets.token_hex(20)
         
-        # Guardamos a chave completa diretamente
+        # Processa a data de expiração enviada pelo frontend
+        expiry_str = data.get('expires_at')
+        try:
+            # Converte a string 'YYYY-MM-DD' para objeto datetime com timezone
+            expiry_date = datetime.strptime(expiry_str, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+        except (ValueError, TypeError):
+            return JsonResponse({'error': 'Data de expiração inválida'}, status=400)
+        
+        # Cria a chave com a data de validade
         ApiKey.objects.create(
             user=request.user,
             name=data.get('name', 'Nova Chave'),
-            key_full=raw_key
+            key_full=raw_key,
+            expires_at=expiry_date,
+            is_active=True
         )
         return JsonResponse({'message': f'Chave gerada: {raw_key}'}, status=201)
 

@@ -5,6 +5,7 @@ from django.conf import settings
 from django.db import models
 from django.utils.text import slugify
 from django.contrib.auth.hashers import make_password
+from django.utils import timezone
 
 from categories.models import Category
 from core.helpers import validate_file_extension, validate_file_size, generate_checksum
@@ -22,6 +23,14 @@ class ApiKey(models.Model):
     name = models.CharField(max_length=100)
     key_full = models.CharField(max_length=128) # Guardar a chave completa aqui
     created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField() # Nova data de expiração
+    is_active = models.BooleanField(default=True) # Para controlar o estado
+
+    def save(self, *args, **kwargs):
+        # Verifica se a chave expirou antes de salvar
+        if self.expires_at < timezone.now():
+            self.is_active = False
+        super().save(*args, **kwargs)
 
 # --- MODELOS DE DATASETS ---
 

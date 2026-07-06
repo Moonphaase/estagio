@@ -2,16 +2,27 @@
 {% block content %}
 <div class="container mx-auto p-8 max-w-2xl">
     <h1 class="text-2xl font-bold mb-6">Gestão de API Keys</h1>
+
+    <!-- Formulário para Criar -->
     <div class="bg-white p-6 rounded shadow mb-8">
         <h2 class="text-lg font-semibold mb-4">Gerar nova chave</h2>
-        <div class="flex gap-2">
-            <input type="text" id="keyName" placeholder="Nome da chave" class="border p-2 flex-grow rounded">
-            <button onclick="gerarChave()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Gerar</button>
+        <div class="flex flex-col gap-3">
+            <input type="text" id="keyName" placeholder="Nome da chave" class="border p-2 rounded">
+            <div class="flex gap-2">
+                <input type="date" id="expiryDate" class="border p-2 flex-grow rounded">
+                <button onclick="gerarChave()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    Gerar
+                </button>
+            </div>
         </div>
     </div>
+
+    <!-- Lista de Chaves -->
     <div class="bg-white p-6 rounded shadow">
         <h2 class="text-lg font-semibold mb-4">As tuas chaves</h2>
-        <div id="listaChaves" class="space-y-2"></div>
+        <div id="listaChaves" class="space-y-2">
+            <p class="text-gray-500">A carregar...</p>
+        </div>
     </div>
 </div>
 
@@ -23,25 +34,63 @@ async function carregarChaves() {
     const chaves = await res.json();
     const lista = document.getElementById('listaChaves');
     
-    lista.innerHTML = chaves.map(k => `
-        <div class="flex justify-between items-center border-b p-2">
-            <span>${k.name} (<code>${k.key_full}</code>)</span>
-            <button onclick="apagarChave(${k.id})" class="text-red-500">Apagar</button>
-        </div>
-    `).join('');
+    if (chaves.length === 0) {
+        lista.innerHTML = '<p class="text-gray-500">Não tens chaves geradas.</p>';
+        return;
+    }
+
+    lista.innerHTML = chaves.map(k => {
+        const estado = k.is_active ? 'Ativa' : 'Expirada';
+        const cor = k.is_active ? 'text-green-600' : 'text-red-600';
+        return `
+            <div class="flex justify-between items-center border-b p-2">
+                <div>
+                    <span class="font-bold">${k.name}</span><br>
+                    <code class="text-sm">${k.key_full}</code><br>
+                    <small class="text-gray-500">Expira em: ${k.expires_at ? k.expires_at.split('T')[0] : 'N/A'} | 
+                        <span class="${cor}">${estado}</span>
+                    </small>
+                </div>
+                <button onclick="apagarChave(${k.id})" class="text-red-500 font-semibold ml-4">Apagar</button>
+            </div>
+        `;
+    }).join('');
 }
 
 async function gerarChave() {
     const name = document.getElementById('keyName').value;
-    await fetch('/api/auth/api-keys/', {
+    const expires_at = document.getElementById('expiryDate').value;
+    
+    if (!expires_at) {
+        alert("Por favor, seleciona uma data de expiração.");
+        return;
+    }
+
+    const res = await fetch('/api/auth/api-keys/', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
-        body: JSON.stringify({ name: name || 'Nova Chave' })
+        headers: {
+            'Content-Type': 'application/json', 
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ 
+            name: name || 'Nova Chave', 
+            expires_at: expires_at 
+        })
     });
-    carregarChaves();
+    
+    const data = await res.json();
+    if (res.ok) {
+        alert(data.message);
+        document.getElementById('keyName').value = '';
+        document.getElementById('expiryDate').value = '';
+        carregarChaves();
+    } else {
+        alert("Erro: " + data.error);
+    }
 }
 
 async function apagarChave(id) {
+    if (!confirm('Tens a certeza que queres eliminar esta chave?')) return;
     await fetch(`/api/auth/api-keys/${id}/`, {
         method: 'DELETE',
         headers: {'X-CSRFToken': '{{ csrf_token }}'}
