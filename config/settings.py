@@ -153,8 +153,8 @@ REST_FRAMEWORK = {
         # Colocamos a classe de API Key como a única primária para autenticação de sistema
         'api_keys.authentication.APIKeyAuthentication',
         # JWT e Session ficam como métodos secundários
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
+        #'rest_framework_simplejwt.authentication.JWTAuthentication',
+        #'rest_framework.authentication.SessionAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         # Alteramos para IsAuthenticated para garantir que NINGUÉM entra sem passar pela autenticação
