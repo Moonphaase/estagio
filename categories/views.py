@@ -1,12 +1,21 @@
 from rest_framework import viewsets, permissions, filters
+import logging
 from .models import Category
 from .serializers import CategorySerializer
 
+# Configuração de logger para visualizar nos logs do Railway
+logger = logging.getLogger(__name__)
+
 class IsAdminOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
+        # Log para verificar quem é o user antes da verificação
+        # Isto aparecerá nos logs do Railway/Servidor
+        logger.info(f"DEBUG AUTH: User={request.user}, IsAuthenticated={request.user.is_authenticated}")
+        
         # Se for apenas leitura (GET, HEAD, OPTIONS), permite se estiver autenticado
         if request.method in permissions.SAFE_METHODS:
             return request.user and request.user.is_authenticated
+        
         # Se for escrita, exige que seja staff
         return request.user and request.user.is_staff
 
@@ -21,6 +30,4 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     ordering_fields    = ["name", "created_at"]
 
     def list(self, request, *args, **kwargs):
-        # Log para depuração nos logs do Railway
-        print(f"DEBUG: User={request.user}, IsAuthenticated={request.user.is_authenticated}")
         return super().list(request, *args, **kwargs)
