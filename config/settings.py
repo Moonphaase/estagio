@@ -150,15 +150,12 @@ else:
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        # Colocamos a classe de API Key como a única primária para autenticação de sistema
-        'api_keys.authentication.APIKeyAuthentication',
-        # JWT e Session ficam como métodos secundários
+        'api_keys.authentication.APIKeyAuthentication', # Prioridade máxima
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
-        # Alteramos para IsAuthenticated para garantir que NINGUÉM entra sem passar pela autenticação
-        'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.IsAuthenticated', # Ninguém entra sem ser autenticado
     ),
     'DEFAULT_PAGINATION_CLASS': 'core.pagination.StandardPagination',
     'PAGE_SIZE': 10,

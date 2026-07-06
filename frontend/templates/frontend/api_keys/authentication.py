@@ -6,26 +6,22 @@ class APIKeyAuthentication(authentication.BaseAuthentication):
     def authenticate(self, request):
         auth = request.META.get('HTTP_AUTHORIZATION')
         
-        # Se não há header, não tenta autenticar por aqui
-        if not auth:
+        # Se não há header de autenticação, retorna None (para tentar JWT ou Session)
+        if not auth or not auth.startswith('Token '):
             return None
-            
-        # Tenta extrair a chave
-        try:
-            # Assume o formato "Token <chave>"
-            key = auth.split(' ')[1]
-        except IndexError:
-            raise exceptions.AuthenticationFailed('Formato de autorização inválido.')
+
+        key = auth.split(' ')[1]
 
         try:
             api_key = APIKey.objects.get(key_full=key)
         except APIKey.DoesNotExist:
-            # Se a chave não existe, bloqueia imediatamente
-            raise exceptions.AuthenticationFailed('Chave inexistente.')
+            # Se a chave foi enviada mas não existe no banco, bloqueia o acesso
+            raise exceptions.AuthenticationFailed('Chave de API inválida.')
 
-        # Verificação rigorosa de data
-        hoje = timezone.now().date()
-        if api_key.expires_at and api_key.expires_at < hoje:
-            raise exceptions.AuthenticationFailed('Esta chave expirou.')
+        # Verificação de Expiração
+        if api_key.expires_at:
+            # Compara se a data de expiração já passou
+            if api_key.expires_at < timezone.now().date():
+                raise exceptions.AuthenticationFailed('Esta chave de API expirou.')
 
         return (api_key.user, api_key)
