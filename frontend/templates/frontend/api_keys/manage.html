@@ -12,7 +12,8 @@
         <form id="formChave" class="flex flex-col gap-3">
             <input type="text" id="keyName" placeholder="Nome da chave" class="border p-2 rounded" required>
             <div class="flex gap-2">
-                <input type="date" id="expiryDate" class="border p-2 flex-grow rounded" required>
+                <!-- Adicionado min (data de hoje) e max (ano 2100) para validar o formato -->
+                <input type="date" id="expiryDate" class="border p-2 flex-grow rounded" required min="2026-07-06" max="2100-12-31">
                 <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
                     Gerar
                 </button>
