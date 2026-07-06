@@ -165,19 +165,21 @@ REST_FRAMEWORK = {
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Dataset Manager API',
-    'DESCRIPTION': 'Documentação oficial da API para gestão de datasets, versões e categorias.',
+    'DESCRIPTION': 'Documentação oficial...',
     'VERSION': '1.0.0',
-    'PREPROCESSING_HOOKS': ['config.spectacular_hooks.only_get_methods'],
-    'SWAGGER_UI_SETTINGS': {
-        'persistAuthorization': True,
-    },
-    'COMPONENT_SCHEMAS': {
-        'jwtAuth': {
-            'type': 'http',
-            'scheme': 'bearer',
-            'bearerFormat': 'JWT',
-        },
-    },
+    'AUTHENTICATION_WHITELIST': [],
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SECURITY': [
+        {'TokenAuth': []}
+    ],
+    'SECURITY_DEFINITIONS': {
+        'TokenAuth': {
+            'type': 'apiKey',
+            'in': 'header',
+            'name': 'Authorization',
+            'description': 'Introduza a chave no formato: Token <chave>'
+        }
+    }
 }
 
 # ── Simple JWT ────────────────────────────────────────────────────────────────
