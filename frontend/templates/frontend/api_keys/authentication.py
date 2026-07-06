@@ -4,26 +4,24 @@ from datasets.models import APIKey
 
 class APIKeyAuthentication(authentication.BaseAuthentication):
     def authenticate(self, request):
-        # A API do DRF espera o header 'Authorization'
-        auth_header = request.headers.get('Authorization')
+        auth = request.META.get('HTTP_AUTHORIZATION')
         
-        if not auth_header:
+        # Se não há header de autenticação, retorna None (para tentar JWT ou Session)
+        if not auth or not auth.startswith('Token '):
             return None
-        
-        # Muitas vezes o Swagger envia "Bearer <chave>" em vez de "Token <chave>"
-        # Vamos aceitar ambos para garantir que o Swagger funciona
-        parts = auth_header.split()
-        if len(parts) != 2:
-            return None
-            
-        key = parts[1]
-        
+
+        key = auth.split(' ')[1]
+
         try:
             api_key = APIKey.objects.get(key_full=key)
         except APIKey.DoesNotExist:
-            raise exceptions.AuthenticationFailed('Chave inválida.')
+            # Se a chave foi enviada mas não existe no banco, bloqueia o acesso
+            raise exceptions.AuthenticationFailed('Chave de API inválida.')
 
-        if api_key.expires_at and api_key.expires_at < timezone.now().date():
-            raise exceptions.AuthenticationFailed('Esta chave expirou.')
+        # Verificação de Expiração
+        if api_key.expires_at:
+            # Compara se a data de expiração já passou
+            if api_key.expires_at < timezone.now().date():
+                raise exceptions.AuthenticationFailed('Esta chave de API expirou.')
 
         return (api_key.user, api_key)
