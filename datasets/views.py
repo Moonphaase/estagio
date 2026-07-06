@@ -36,10 +36,11 @@ def get_client_ip(request):
 
 
 class DatasetViewSet(viewsets.ModelViewSet):
-    queryset         = Dataset.objects.select_related("owner", "category", "metadata")
-    filter_backends  = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields    = ["name", "description", "category__name"]
-    ordering_fields  = ["name", "created_at", "updated_at", "status", "visibility"]
+    queryset           = Dataset.objects.select_related("owner", "category", "metadata")
+    filter_backends    = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields      = ["name", "description", "category__name"]
+    ordering_fields    = ["name", "created_at", "updated_at", "status", "visibility"]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -116,7 +117,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
 
     # ── DOWNLOADS ────────────────────────────────────────────────────────────
 
-    @action(detail=True, methods=["get"], url_path="latest/download")
+    @action(detail=True, methods=["get"], url_path="latest/download", permission_classes=[IsAuthenticated])
     def latest_download(self, request, pk=None):
         dataset = self.get_object()
         version = dataset.versions.filter(is_latest=True).first()
@@ -138,8 +139,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
         response["Content-Length"] = version.file_size
         return response
 
-    @action(detail=True, methods=["get"], url_path="stats",
-            permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=["get"], url_path="stats", permission_classes=[IsAuthenticated])
     def stats(self, request, pk=None):
         dataset = self.get_object()
         now     = timezone.now()
@@ -154,9 +154,9 @@ class DatasetViewSet(viewsets.ModelViewSet):
             .order_by("-total")
         )
         data = {
-            "dataset_id":             dataset.id,
-            "dataset_name":           dataset.name,
-            "total_downloads":        total,
+            "dataset_id":            dataset.id,
+            "dataset_name":          dataset.name,
+            "total_downloads":       total,
             "downloads_last_7_days":  last_7,
             "downloads_last_30_days": last_30,
             "downloads_by_version": [
@@ -233,7 +233,7 @@ class DatasetVersionViewSet(viewsets.ModelViewSet):
                 next_latest.save(update_fields=["is_latest"])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(detail=True, methods=["get"])
+    @action(detail=True, methods=["get"], permission_classes=[permissions.IsAuthenticated])
     def download(self, request, dataset_pk=None, pk=None):
         version = self.get_object()
         if not version.file:
