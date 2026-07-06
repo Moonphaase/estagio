@@ -13,15 +13,12 @@ from django.http import FileResponse, JsonResponse
 from categories.models import Category
 from datasets.models import Dataset, DatasetVersion, DownloadLog, AuditLog, DatasetFavorite, DatasetShare, DatasetMetadata
 from datasets.audit import audit, audit_dataset_changes
-from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import make_password
 from datasets.models import ApiKey
 from django.utils import timezone
-from datetime import datetime
-from datetime import timezone as dt_timezone
-from django.utils.timezone import utc
+from datetime import datetime, timezone as dt_timezone
 
 logger = logging.getLogger('accounts')
 
@@ -135,7 +132,7 @@ def api_keys_api(request, id=None):
             naive_dt = datetime.strptime(expiry_str, '%Y-%m-%d')
             
             # Torna a data "aware" usando o fuso horário atual do servidor (evita o erro do UTC)
-            expiry_date = timezone.make_aware(naive_dt)
+            expiry_date = datetime.strptime(expiry_str, '%Y-%m-%d').replace(tzinfo=dt_timezone.utc)
             
             ApiKey.objects.create(
                 user=request.user,
