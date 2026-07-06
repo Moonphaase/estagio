@@ -3,20 +3,16 @@ from .models import Category
 from .serializers import CategorySerializer
 
 class IsAdminOrReadOnly(permissions.BasePermission):
-    """
-    Permite leitura a todos (ou apenas autenticados) e escrita apenas a admins.
-    """
     def has_permission(self, request, view):
-        # Se for um método de leitura (GET, HEAD, OPTIONS), verifica se está autenticado
+        # Permite leitura para qualquer utilizador autenticado
         if request.method in permissions.SAFE_METHODS:
             return request.user and request.user.is_authenticated
-        
-        # Se for escrita (POST, PUT, DELETE), verifica se é admin
+        # Permite escrita apenas para admins
         return request.user and request.user.is_staff
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
-    # Definimos apenas UMA lista de permissões que exige autenticação
-    permission_classes = [IsAdminOrReadOnly]
+    # Aqui permitimos que o IsAuthenticated global e a nossa classe tratem o acesso
+    permission_classes = [permissions.IsAuthenticated, IsAdminOrReadOnly]
     
     queryset           = Category.objects.all()
     serializer_class   = CategorySerializer
