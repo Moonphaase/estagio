@@ -59,6 +59,8 @@ class LogoutView(APIView):
 class MeView(generics.RetrieveUpdateAPIView):
     """GET/PATCH /api/auth/me/"""
     serializer_class   = UserSerializer
+    # Garante que este endpoint exige autenticação.
+    # Se estiveres a usar a API Key, ela será validada aqui.
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
