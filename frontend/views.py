@@ -20,6 +20,8 @@ from django.contrib.auth.hashers import make_password
 from datasets.models import ApiKey
 from django.utils import timezone
 from datetime import datetime
+from datetime import timezone as dt_timezone
+from django.utils.timezone import utc
 
 logger = logging.getLogger('accounts')
 
