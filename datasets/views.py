@@ -18,6 +18,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from .models import Dataset, DatasetVersion, DownloadLog, DatasetFavorite
+from .permissions import IsOwnerOrAdmin
 from .serializers import (
     DatasetSerializer, DatasetListSerializer,
     DatasetVersionSerializer, DatasetStatsSerializer,
@@ -35,21 +36,28 @@ def get_client_ip(request):
 
 
 class DatasetViewSet(viewsets.ModelViewSet):
-    queryset           = Dataset.objects.select_related("owner", "category", "metadata")
-    filter_backends    = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields      = ["name", "description", "category__name"]
-    ordering_fields    = ["name", "created_at", "updated_at", "status", "visibility"]
-    permission_classes = [IsAuthenticated] # Proteção aplicada
+    queryset         = Dataset.objects.select_related("owner", "category", "metadata")
+    filter_backends  = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields    = ["name", "description", "category__name"]
+    ordering_fields  = ["name", "created_at", "updated_at", "status", "visibility"]
 
     def get_serializer_class(self):
         if self.action == "list":
             return DatasetListSerializer
         return DatasetSerializer
 
+    def get_permissions(self):
+        if self.action in ["list", "retrieve"]:
+            return [permissions.IsAuthenticated()]
+        return [permissions.IsAuthenticated(), IsOwnerOrAdmin()]
+
     def get_queryset(self):
         qs   = super().get_queryset()
         user = self.request.user
-        if not user.is_staff:
+
+        if user.is_staff:
+            pass
+        else:
             qs = qs.filter(Q(visibility="public") | Q(owner=user))
 
         category   = self.request.query_params.get("category")
@@ -57,10 +65,14 @@ class DatasetViewSet(viewsets.ModelViewSet):
         visibility = self.request.query_params.get("visibility")
         ds_status  = self.request.query_params.get("status")
 
-        if category: qs = qs.filter(category__slug=category)
-        if owner: qs = qs.filter(owner__username=owner)
-        if visibility: qs = qs.filter(visibility=visibility)
-        if ds_status: qs = qs.filter(status=ds_status)
+        if category:
+            qs = qs.filter(category__slug=category)
+        if owner:
+            qs = qs.filter(owner__username=owner)
+        if visibility:
+            qs = qs.filter(visibility=visibility)
+        if ds_status:
+            qs = qs.filter(status=ds_status)
 
         return qs.order_by("-created_at")
 
@@ -86,7 +98,9 @@ class DatasetViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def favorite(self, request, pk=None):
         dataset  = self.get_object()
-        favorite, created = DatasetFavorite.objects.get_or_create(user=request.user, dataset=dataset)
+        favorite, created = DatasetFavorite.objects.get_or_create(
+            user=request.user, dataset=dataset
+        )
         if not created:
             favorite.delete()
             return Response({'status': 'removed', 'is_favorited': False})
@@ -94,7 +108,9 @@ class DatasetViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def my_favorites(self, request):
-        favorites  = DatasetFavorite.objects.filter(user=request.user).select_related('dataset')
+        favorites  = DatasetFavorite.objects.filter(
+            user=request.user
+        ).select_related('dataset')
         serializer = DatasetFavoriteSerializer(favorites, many=True)
         return Response(serializer.data)
 
@@ -122,7 +138,8 @@ class DatasetViewSet(viewsets.ModelViewSet):
         response["Content-Length"] = version.file_size
         return response
 
-    @action(detail=True, methods=["get"], permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=["get"], url_path="stats",
+            permission_classes=[IsAuthenticated])
     def stats(self, request, pk=None):
         dataset = self.get_object()
         now     = timezone.now()
@@ -137,10 +154,10 @@ class DatasetViewSet(viewsets.ModelViewSet):
             .order_by("-total")
         )
         data = {
-            "dataset_id":           dataset.id,
-            "dataset_name":         dataset.name,
-            "total_downloads":      total,
-            "downloads_last_7_days": last_7,
+            "dataset_id":             dataset.id,
+            "dataset_name":           dataset.name,
+            "total_downloads":        total,
+            "downloads_last_7_days":  last_7,
             "downloads_last_30_days": last_30,
             "downloads_by_version": [
                 {"version": row["version__version"], "total": row["total"]}
@@ -153,7 +170,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
 
 class DatasetVersionViewSet(viewsets.ModelViewSet):
     serializer_class   = DatasetVersionSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         return DatasetVersion.objects.filter(
@@ -180,8 +197,10 @@ class DatasetVersionViewSet(viewsets.ModelViewSet):
                 raise PermissionDenied(str(e))
 
             checksum = generate_checksum(file)
+
             if dataset.versions.filter(checksum=checksum).exists():
                 raise PermissionDenied("Este ficheiro já foi enviado numa versão anterior.")
+
             file.name = dataset_upload_path(dataset.id, version_number, file.name)
 
         with transaction.atomic():
