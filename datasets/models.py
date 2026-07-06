@@ -4,7 +4,6 @@ import secrets
 from django.conf import settings
 from django.db import models
 from django.utils.text import slugify
-from django.contrib.auth.hashers import make_password
 from django.utils import timezone
 
 from categories.models import Category
@@ -21,17 +20,22 @@ def dataset_version_upload_path(instance, filename):
 class ApiKey(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="dataset_api_keys")
     name = models.CharField(max_length=100)
-    key_full = models.CharField(max_length=128) # Guardar a chave completa aqui
+    key_full = models.CharField(max_length=128)
     created_at = models.DateTimeField(auto_now_add=True)
-    expires_at = models.DateTimeField() # Nova data de expiração
     expires_at = models.DateTimeField(null=True, blank=True) 
     is_active = models.BooleanField(default=True)
 
+    class Meta:
+        db_table = 'datasets_apikey' # Força o uso da tabela correta encontrada via shell
+
     def save(self, *args, **kwargs):
-        # Verifica se a chave expirou antes de salvar
-        if self.expires_at < timezone.now():
+        # Verifica se a chave expirou
+        if self.expires_at and self.expires_at < timezone.now():
             self.is_active = False
         super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.name} - {self.user.username}"
 
 # --- MODELOS DE DATASETS ---
 
@@ -94,25 +98,25 @@ class Dataset(models.Model):
         return self.name
 
 class DatasetVersion(models.Model):
-    dataset    = models.ForeignKey(
+    dataset      = models.ForeignKey(
         Dataset, on_delete=models.CASCADE, related_name="versions"
     )
-    version    = models.CharField(max_length=50)
-    title      = models.CharField(max_length=255, blank=True)
-    file       = models.FileField(
+    version      = models.CharField(max_length=50)
+    title        = models.CharField(max_length=255, blank=True)
+    file         = models.FileField(
         upload_to=dataset_version_upload_path,
         validators=[validate_file_extension, validate_file_size],
     )
-    notes      = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    created_by = models.ForeignKey(
+    notes        = models.TextField(blank=True)
+    created_at   = models.DateTimeField(auto_now_add=True)
+    created_by   = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
         null=True, related_name="dataset_versions"
     )
-    is_latest  = models.BooleanField(default=False)
-    file_size  = models.PositiveBigIntegerField(default=0)
-    file_type  = models.CharField(max_length=20, blank=True)
-    checksum   = models.CharField(max_length=64, blank=True)
+    is_latest    = models.BooleanField(default=False)
+    file_size    = models.PositiveBigIntegerField(default=0)
+    file_type    = models.CharField(max_length=20, blank=True)
+    checksum     = models.CharField(max_length=64, blank=True)
 
     class Meta:
         verbose_name = "Versão do Dataset"
@@ -135,17 +139,17 @@ class DatasetVersion(models.Model):
         return f"{self.dataset.name} - v{self.version}"
 
 class DatasetMetadata(models.Model):
-    dataset     = models.OneToOneField(
+    dataset       = models.OneToOneField(
         Dataset, on_delete=models.CASCADE, related_name="metadata"
     )
-    source      = models.URLField(blank=True)
-    license     = models.CharField(max_length=100, blank=True)
-    tags        = models.JSONField(default=list, blank=True)
-    language    = models.CharField(max_length=50, blank=True)
-    size_bytes  = models.BigIntegerField(null=True, blank=True)
-    num_records = models.PositiveIntegerField(null=True, blank=True)
-    extra       = models.JSONField(default=dict, blank=True)
-    updated_at  = models.DateTimeField(auto_now=True)
+    source        = models.URLField(blank=True)
+    license       = models.CharField(max_length=100, blank=True)
+    tags          = models.JSONField(default=list, blank=True)
+    language      = models.CharField(max_length=50, blank=True)
+    size_bytes    = models.BigIntegerField(null=True, blank=True)
+    num_records   = models.PositiveIntegerField(null=True, blank=True)
+    extra         = models.JSONField(default=dict, blank=True)
+    updated_at    = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "Metadados do Dataset"
@@ -154,16 +158,16 @@ class DatasetMetadata(models.Model):
         return f"Metadados - {self.dataset.name}"
 
 class Comment(models.Model):
-    dataset    = models.ForeignKey(
+    dataset      = models.ForeignKey(
         Dataset, on_delete=models.CASCADE, related_name="comments"
     )
-    author     = models.ForeignKey(
+    author       = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
         related_name="comments"
     )
-    content    = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    content      = models.TextField()
+    created_at   = models.DateTimeField(auto_now_add=True)
+    updated_at   = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "Comentário"
@@ -174,19 +178,19 @@ class Comment(models.Model):
         return f"Comentário de {self.author} em {self.dataset.name}"
 
 class DownloadLog(models.Model):
-    dataset       = models.ForeignKey(
+    dataset         = models.ForeignKey(
         Dataset, on_delete=models.CASCADE, related_name="download_logs"
     )
-    version       = models.ForeignKey(
+    version         = models.ForeignKey(
         DatasetVersion, on_delete=models.SET_NULL,
         null=True, blank=True, related_name="download_logs"
     )
-    user          = models.ForeignKey(
+    user            = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
         null=True, blank=True, related_name="download_logs"
     )
-    downloaded_at = models.DateTimeField(auto_now_add=True)
-    ip_address    = models.GenericIPAddressField(null=True, blank=True)
+    downloaded_at   = models.DateTimeField(auto_now_add=True)
+    ip_address      = models.GenericIPAddressField(null=True, blank=True)
 
     class Meta:
         verbose_name = "Log de Download"
@@ -212,17 +216,17 @@ class AuditLog(models.Model):
         CATEGORY = "category", "Categoria"
         USER     = "user",     "Utilizador"
 
-    user          = models.ForeignKey(
+    user            = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
         null=True, blank=True, related_name="audit_logs"
     )
-    action        = models.CharField(max_length=10, choices=Action.choices)
-    resource      = models.CharField(max_length=10, choices=Resource.choices)
-    resource_id   = models.PositiveIntegerField(null=True, blank=True)
-    description   = models.TextField(blank=True)
-    changes       = models.JSONField(default=dict, blank=True)
-    ip_address    = models.GenericIPAddressField(null=True, blank=True)
-    timestamp     = models.DateTimeField(auto_now_add=True)
+    action          = models.CharField(max_length=10, choices=Action.choices)
+    resource        = models.CharField(max_length=10, choices=Resource.choices)
+    resource_id     = models.PositiveIntegerField(null=True, blank=True)
+    description     = models.TextField(blank=True)
+    changes         = models.JSONField(default=dict, blank=True)
+    ip_address      = models.GenericIPAddressField(null=True, blank=True)
+    timestamp       = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name = "Log de Auditoria"
@@ -238,18 +242,18 @@ class AuditLog(models.Model):
         return f"[{self.timestamp:%Y-%m-%d %H:%M}] {self.user} - {self.get_action_display()} {self.get_resource_display()} #{self.resource_id}"
 
 class DatasetShare(models.Model):
-    dataset     = models.ForeignKey(
+    dataset       = models.ForeignKey(
         Dataset, on_delete=models.CASCADE, related_name="shares"
     )
-    shared_with = models.ForeignKey(
+    shared_with   = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
         related_name="shared_datasets"
     )
-    shared_by   = models.ForeignKey(
+    shared_by     = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
         related_name="dataset_shares_made"
     )
-    created_at  = models.DateTimeField(auto_now_add=True)
+    created_at    = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name = "Partilha de Dataset"
@@ -261,15 +265,15 @@ class DatasetShare(models.Model):
         return f"{self.dataset.name} partilhado com {self.shared_with}"
 
 class DatasetFavorite(models.Model):
-    user      = models.ForeignKey(
+    user        = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
         related_name='favorites'
     )
-    dataset   = models.ForeignKey(
+    dataset     = models.ForeignKey(
         Dataset, on_delete=models.CASCADE,
         related_name='favorited_by'
     )
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         unique_together = [("user", "dataset")]
