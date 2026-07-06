@@ -6,15 +6,16 @@
     <!-- Formulário para Criar -->
     <div class="bg-white p-6 rounded shadow mb-8">
         <h2 class="text-lg font-semibold mb-4">Gerar nova chave</h2>
-        <div class="flex flex-col gap-3">
-            <input type="text" id="keyName" placeholder="Nome da chave" class="border p-2 rounded">
+        <!-- Form utilizado para disparar a validação nativa do browser -->
+        <form id="formChave" class="flex flex-col gap-3">
+            <input type="text" id="keyName" placeholder="Nome da chave" class="border p-2 rounded" required>
             <div class="flex gap-2">
-                <input type="date" id="expiryDate" class="border p-2 flex-grow rounded">
-                <button onclick="gerarChave()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                <input type="date" id="expiryDate" class="border p-2 flex-grow rounded" required>
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
                     Gerar
                 </button>
             </div>
-        </div>
+        </form>
     </div>
 
     <!-- Lista de Chaves -->
@@ -32,6 +33,38 @@ window.onload = carregarChaves;
 function getCsrfToken() {
     return '{{ csrf_token }}';
 }
+
+// Interceção do envio do formulário
+document.getElementById('formChave').addEventListener('submit', async function(e) {
+    e.preventDefault(); // Impede o recarregamento da página
+
+    const nome = document.getElementById('keyName').value;
+    const data = document.getElementById('expiryDate').value;
+
+    try {
+        const response = await fetch('/api/auth/api-keys/', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken() 
+            },
+            body: JSON.stringify({ 
+                name: nome,
+                expires_at: data 
+            })
+        });
+
+        if (response.ok) {
+            alert("Chave gerada com sucesso!");
+            location.reload(); 
+        } else {
+            const errorData = await response.json();
+            alert("Erro: " + (errorData.error || "Ocorreu um problema ao gerar a chave."));
+        }
+    } catch (err) {
+        console.error("Erro ao gerar:", err);
+    }
+});
 
 async function carregarChaves() {
     try {
@@ -62,45 +95,6 @@ async function carregarChaves() {
         }).join('');
     } catch (e) {
         document.getElementById('listaChaves').innerHTML = '<p class="text-red-500">Erro ao carregar chaves.</p>';
-    }
-}
-
-async function gerarChave() {
-    const nome = document.getElementById('keyName').value; 
-    const data = document.getElementById('expiryDate').value;
-
-    // Validação obrigatória
-    if (!nome) {
-        alert("Por favor, dá um nome à chave.");
-        return;
-    }
-    if (!data) {
-        alert("Por favor, seleciona uma data de expiração.");
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/auth/api-keys/', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCsrfToken() 
-            },
-            body: JSON.stringify({ 
-                name: nome,
-                expires_at: data 
-            })
-        });
-
-        if (response.ok) {
-            alert("Chave gerada com sucesso!");
-            location.reload(); 
-        } else {
-            const errorData = await response.json();
-            alert("Erro: " + (errorData.error || "Ocorreu um problema ao gerar a chave."));
-        }
-    } catch (err) {
-        console.error("Erro ao gerar:", err);
     }
 }
 
