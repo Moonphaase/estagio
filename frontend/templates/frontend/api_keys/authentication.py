@@ -4,24 +4,27 @@ from datasets.models import APIKey
 
 class APIKeyAuthentication(authentication.BaseAuthentication):
     def authenticate(self, request):
-        # DEBUG: Ponto de interrupção forçado para testar se a classe é chamada
-        raise Exception("O Django chamou a classe APIKeyAuthentication!")
-
         auth = request.META.get('HTTP_AUTHORIZATION')
+        
+        # Se não há header, não tenta autenticar por aqui
         if not auth:
-            return None 
-
+            return None
+            
+        # Extrai a chave (exemplo: "Token 123")
         try:
             key = auth.split(' ')[1]
         except IndexError:
-            return None
+            raise exceptions.AuthenticationFailed('Formato de autorização inválido.')
 
+        # Tenta buscar a chave
         try:
             api_key = APIKey.objects.get(key_full=key)
         except APIKey.DoesNotExist:
-            raise exceptions.AuthenticationFailed('Chave inválida')
+            # AQUI ESTÁ O ERRO: Se a chave "1" não existe, o sistema TEM de parar aqui
+            raise exceptions.AuthenticationFailed('Chave inexistente.')
 
-        if api_key.expires_at and api_key.expires_at <= timezone.now().date():
+        # Verificação de expiração
+        if api_key.expires_at and api_key.expires_at < timezone.now().date():
             raise exceptions.AuthenticationFailed('Esta chave expirou.')
 
         return (api_key.user, api_key)
