@@ -11,8 +11,6 @@ class IsAdminOrReadOnly(permissions.BasePermission):
         return request.user and request.user.is_staff
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
-    # Removemos o IsAuthenticated daqui porque ele já é global no settings.py
-    # Assim, só precisamos desta regra de Admin
     permission_classes = [IsAdminOrReadOnly]
     
     queryset           = Category.objects.all()
@@ -21,3 +19,8 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     filter_backends    = [filters.SearchFilter, filters.OrderingFilter]
     search_fields      = ["name", "description"]
     ordering_fields    = ["name", "created_at"]
+
+    def list(self, request, *args, **kwargs):
+        # Log para depuração nos logs do Railway
+        print(f"DEBUG: User={request.user}, IsAuthenticated={request.user.is_authenticated}")
+        return super().list(request, *args, **kwargs)
