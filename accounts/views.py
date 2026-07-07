@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework.permissions import AllowAny
 
 from .serializers import RegisterSerializer, UserSerializer, EmailTokenObtainPairSerializer
 
@@ -65,3 +66,13 @@ class MeView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
+    
+class DebugHeadersView(APIView):
+    """GET /api/auth/debug-headers/ — temporário, para diagnóstico"""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        return Response({
+            "HTTP_AUTHORIZATION": request.META.get('HTTP_AUTHORIZATION'),
+            "all_http_headers": {k: v for k, v in request.META.items() if k.startswith('HTTP_')},
+        })
