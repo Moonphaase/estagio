@@ -16,6 +16,8 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import SessionAuthentication
+from api_keys.authentication import APIKeyAuthentication  # Ajusta o caminho se for outro
 
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiTypes
 
@@ -45,6 +47,8 @@ def get_client_ip(request):
     destroy=extend_schema(summary="Apagar dataset"),
 )
 class DatasetViewSet(viewsets.ModelViewSet):
+    authentication_classes = [APIKeyAuthentication, SessionAuthentication]
+    permission_classes = [IsAuthenticated]
     queryset           = Dataset.objects.select_related("owner", "category", "metadata")
     filter_backends    = [filters.SearchFilter, filters.OrderingFilter]
     search_fields      = ["name", "description", "category__name"]
