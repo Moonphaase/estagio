@@ -8,16 +8,22 @@ from datasets.models import ApiKey
 
 class APIKeyAuthentication(authentication.BaseAuthentication):
     def authenticate(self, request):
+        print("=== APIKeyAuthentication.authenticate() CHAMADO ===", flush=True)
         auth = request.META.get('HTTP_AUTHORIZATION')
+        print(f"=== HTTP_AUTHORIZATION recebido: {auth} ===", flush=True)
 
         if not auth or not auth.startswith('Token '):
+            print("=== SAIU: sem header ou formato errado ===", flush=True)
             return None
 
         key = auth.split(' ')[1]
+        print(f"=== Key extraída: {key[:8]}... ===", flush=True)
 
         try:
             api_key = ApiKey.objects.select_related('user').get(key_full=key)
+            print(f"=== Key encontrada na BD para user={api_key.user} ===", flush=True)
         except ApiKey.DoesNotExist:
+            print("=== Key NÃO existe na BD ===", flush=True)
             raise exceptions.AuthenticationFailed('Chave de API inválida.')
 
         # expires_at é DateTimeField — comparar com timezone.now() diretamente
