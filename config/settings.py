@@ -6,14 +6,10 @@ import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# ── Segurança ─────────────────────────────────────────────────────────────────
-
-SECRET_KEY         = config('SECRET_KEY', default='django-insecure-ba1nx#5aqw4jc7z-n%%mj*)ik4&3j7q!7o8w-1t0t$@kd9(s)3')
-DEBUG              = config('DEBUG', default=True, cast=bool)
-ALLOWED_HOSTS      = str(config('ALLOWED_HOSTS', default='*')).split(',')
+SECRET_KEY           = config('SECRET_KEY', default='django-insecure-ba1nx#5aqw4jc7z-n%%mj*)ik4&3j7q!7o8w-1t0t$@kd9(s)3')
+DEBUG                = config('DEBUG', default=True, cast=bool)
+ALLOWED_HOSTS        = str(config('ALLOWED_HOSTS', default='*')).split(',')
 CSRF_TRUSTED_ORIGINS = str(config('CSRF_TRUSTED_ORIGINS', default='http://localhost')).split(',')
-
-# ── Apps ──────────────────────────────────────────────────────────────────────
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -35,8 +31,6 @@ INSTALLED_APPS = [
     'api_keys',
 ]
 
-# ── Middleware ────────────────────────────────────────────────────────────────
-
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -49,8 +43,6 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'config.urls'
-
-# ── Templates ─────────────────────────────────────────────────────────────────
 
 TEMPLATES = [
     {
@@ -69,16 +61,14 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# ── Base de dados ─────────────────────────────────────────────────────────────
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME':    config('DB_NAME',    default='estagio'),
-        'USER':    config('DB_USER',    default='postgres'),
+        'NAME':     config('DB_NAME',     default='estagio'),
+        'USER':     config('DB_USER',     default='postgres'),
         'PASSWORD': config('DB_PASSWORD', default='chico'),
-        'HOST':    config('DB_HOST',    default='localhost'),
-        'PORT':    config('DB_PORT',    default='5432'),
+        'HOST':     config('DB_HOST',     default='localhost'),
+        'PORT':     config('DB_PORT',     default='5432'),
     }
 }
 
@@ -87,8 +77,6 @@ if config('DATABASE_URL', default=None):
         default=config('DATABASE_URL'),
         conn_max_age=600,
     )
-
-# ── Auth ──────────────────────────────────────────────────────────────────────
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -102,19 +90,13 @@ LOGIN_URL              = 'login'
 LOGIN_REDIRECT_URL     = 'dashboard'
 LOGOUT_REDIRECT_URL    = 'login'
 
-# ── Internacionalização ───────────────────────────────────────────────────────
-
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE     = 'UTC'
 USE_I18N      = True
 USE_TZ        = True
 
-# ── Ficheiros estáticos ───────────────────────────────────────────────────────
-
 STATIC_URL  = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-
-# ── Armazenamento ─────────────────────────────────────────────────────────────
 
 USE_S3 = config('USE_S3', default=False, cast=bool)
 
@@ -131,8 +113,8 @@ if USE_S3:
         },
     }
 
-    AWS_ACCESS_KEY_ID      = config('MINIO_ACCESS_KEY')
-    AWS_SECRET_ACCESS_KEY  = config('MINIO_SECRET_KEY')
+    AWS_ACCESS_KEY_ID        = config('MINIO_ACCESS_KEY')
+    AWS_SECRET_ACCESS_KEY    = config('MINIO_SECRET_KEY')
     AWS_STORAGE_BUCKET_NAME  = config('MINIO_BUCKET')
     AWS_S3_ENDPOINT_URL      = f"{_scheme}://{config('MINIO_ENDPOINT')}"
     AWS_S3_USE_SSL           = _use_https
@@ -145,8 +127,6 @@ if USE_S3:
 else:
     MEDIA_URL  = '/media/'
     MEDIA_ROOT = BASE_DIR / 'media'
-
-# ── DRF e Swagger ─────────────────────────────────────────────────────────────
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -165,22 +145,31 @@ REST_FRAMEWORK = {
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Dataset Manager API',
-    'DESCRIPTION': 'Documentação oficial da API para gestão de datasets, versões e categorias.',
+    'DESCRIPTION': (
+        'Documentação oficial da API para gestão de datasets, versões e categorias.\n\n'
+        '## Autenticação\n'
+        'Esta API requer uma **API Key** válida gerada no site.\n\n'
+        'Inclui o header: `Authorization: Token <a_tua_chave>`'
+    ),
     'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
     'PREPROCESSING_HOOKS': ['config.spectacular_hooks.only_get_methods'],
+    'SECURITY': [{'apiKeyAuth': []}],
+    'COMPONENTS': {
+        'securitySchemes': {
+            'apiKeyAuth': {
+                'type': 'apiKey',
+                'in': 'header',
+                'name': 'Authorization',
+                'description': 'Formato: **Token <a_tua_chave>**',
+            }
+        }
+    },
     'SWAGGER_UI_SETTINGS': {
         'persistAuthorization': True,
-    },
-    'COMPONENT_SCHEMAS': {
-        'jwtAuth': {
-            'type': 'http',
-            'scheme': 'bearer',
-            'bearerFormat': 'JWT',
-        },
+        'displayRequestDuration': True,
     },
 }
-
-# ── Simple JWT ────────────────────────────────────────────────────────────────
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME':  timedelta(hours=1),
@@ -190,8 +179,6 @@ SIMPLE_JWT = {
     'ALGORITHM':    'HS256',
     'SIGNING_KEY':  SECRET_KEY,
 }
-
-# ── Logging ───────────────────────────────────────────────────────────────────
 
 LOGS_DIR = BASE_DIR / 'logs'
 LOGS_DIR.mkdir(exist_ok=True)
