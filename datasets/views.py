@@ -17,6 +17,8 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiTypes
+
 from .models import Dataset, DatasetVersion, DownloadLog, DatasetFavorite
 from .permissions import IsOwnerOrAdmin
 from .serializers import (
@@ -35,6 +37,13 @@ def get_client_ip(request):
     return request.META.get("REMOTE_ADDR")
 
 
+@extend_schema_view(
+    list=extend_schema(summary="Listar datasets"),
+    retrieve=extend_schema(summary="Detalhes de um dataset"),
+    create=extend_schema(summary="Criar novo dataset"),
+    update=extend_schema(summary="Atualizar dataset"),
+    destroy=extend_schema(summary="Apagar dataset"),
+)
 class DatasetViewSet(viewsets.ModelViewSet):
     queryset           = Dataset.objects.select_related("owner", "category", "metadata")
     filter_backends    = [filters.SearchFilter, filters.OrderingFilter]
@@ -139,6 +148,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
         response["Content-Length"] = version.file_size
         return response
 
+    @extend_schema(responses=DatasetStatsSerializer)
     @action(detail=True, methods=["get"], url_path="stats", permission_classes=[IsAuthenticated])
     def stats(self, request, pk=None):
         dataset = self.get_object()
@@ -154,9 +164,9 @@ class DatasetViewSet(viewsets.ModelViewSet):
             .order_by("-total")
         )
         data = {
-            "dataset_id":            dataset.id,
-            "dataset_name":          dataset.name,
-            "total_downloads":       total,
+            "dataset_id":           dataset.id,
+            "dataset_name":         dataset.name,
+            "total_downloads":      total,
             "downloads_last_7_days":  last_7,
             "downloads_last_30_days": last_30,
             "downloads_by_version": [
@@ -168,6 +178,10 @@ class DatasetViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+@extend_schema_view(
+    list=extend_schema(parameters=[OpenApiParameter("dataset_pk", OpenApiTypes.INT, OpenApiParameter.PATH)]),
+    retrieve=extend_schema(parameters=[OpenApiParameter("dataset_pk", OpenApiTypes.INT, OpenApiParameter.PATH), OpenApiParameter("id", OpenApiTypes.INT, OpenApiParameter.PATH)]),
+)
 class DatasetVersionViewSet(viewsets.ModelViewSet):
     serializer_class   = DatasetVersionSerializer
     permission_classes = [permissions.IsAuthenticated]
