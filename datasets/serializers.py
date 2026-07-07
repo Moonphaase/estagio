@@ -26,6 +26,7 @@ class DatasetVersionSerializer(serializers.ModelSerializer):
             "is_latest", "created_at", "created_by",
         ]
 
+    @extend_schema_field(OpenApiTypes.URI)
     def get_file_url(self, obj):
         request = self.context.get("request")
         if obj.file and request:
@@ -68,6 +69,7 @@ class DatasetSerializer(serializers.ModelSerializer):
             return {"id": latest.id, "version": latest.version}
         return None
 
+    @extend_schema_field(OpenApiTypes.BOOL)
     def get_is_favorited(self, obj):
         request = self.context.get("request")
         if request and request.user.is_authenticated:
@@ -109,15 +111,18 @@ class DatasetListSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "slug", "owner", "created_at", "updated_at"]
 
+    @extend_schema_field(OpenApiTypes.INT)
     def get_version_count(self, obj):
         return obj.versions.count()
 
+    @extend_schema_field(OpenApiTypes.OBJECT)
     def get_latest_version(self, obj):
         latest = obj.versions.filter(is_latest=True).first()
         if latest:
             return {"id": latest.id, "version": latest.version}
         return None
 
+    @extend_schema_field(OpenApiTypes.BOOL)
     def get_is_favorited(self, obj):
         request = self.context.get("request")
         if request and request.user.is_authenticated:
