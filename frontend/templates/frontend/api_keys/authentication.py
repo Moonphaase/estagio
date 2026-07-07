@@ -1,42 +1,38 @@
-from rest_framework import authentication, exceptions
+from rest_framework.authentication import BaseAuthentication
+from rest_framework.exceptions import AuthenticationFailed
 from django.utils import timezone
-import logging
-
-logger = logging.getLogger(__name__)
-
 from datasets.models import ApiKey
 
-class APIKeyAuthentication(authentication.BaseAuthentication):
+
+class ApiKeyAuthentication(BaseAuthentication):
+    keyword = "Api-Key"
+
     def authenticate(self, request):
-        print("=== APIKeyAuthentication.authenticate() CHAMADO ===", flush=True)
-        auth = request.META.get('HTTP_AUTHORIZATION')
-        print(f"=== HTTP_AUTHORIZATION recebido: {auth} ===", flush=True)
-
-        if not auth or not auth.startswith('Token '):
-            print("=== SAIU: sem header ou formato errado ===", flush=True)
-            return None
-
-        key = auth.split(' ')[1]
-        print(f"=== Key extraída: {key[:8]}... ===", flush=True)
+        auth_header = request.headers.get("Authorization")
+        if not auth_header:
+            return None  # sem header -> AnonymousUser (a permission class é que bloqueia depois)
 
         try:
-            api_key = ApiKey.objects.select_related('user').get(key_full=key)
-            print(f"=== Key encontrada na BD para user={api_key.user} ===", flush=True)
+            prefix, key = auth_header.split(" ", 1)
+        except ValueError:
+            raise AuthenticationFailed("Formato inválido. Use: Authorization: Api-Key <chave>")
+
+        if prefix != self.keyword:
+            return None
+
+        try:
+            api_key = ApiKey.objects.get(key_full=key)
         except ApiKey.DoesNotExist:
-            print("=== Key NÃO existe na BD ===", flush=True)
-            raise exceptions.AuthenticationFailed('Chave de API inválida.')
+            raise AuthenticationFailed("API Key inválida.")
 
-        # expires_at é DateTimeField — comparar com timezone.now() diretamente
-        logger.info(f"DEBUG AUTH: Chave={key[:5]}... Expira em={api_key.expires_at}, Agora={timezone.now()}")
-
+        # Validar expiração diretamente no pedido, não depender do cron do painel
         if api_key.expires_at and api_key.expires_at < timezone.now():
-            logger.warning(f"DEBUG AUTH: Bloqueando chave expirada {key[:5]}...")
-            raise exceptions.AuthenticationFailed('Esta chave de API expirou.')
+            if api_key.is_active:
+                api_key.is_active = False
+                api_key.save(update_fields=["is_active"])
+            raise AuthenticationFailed("API Key expirada.")
 
         if not api_key.is_active:
-            raise exceptions.AuthenticationFailed('Esta chave de API está inativa.')
-
-        if not api_key.user.is_active:
-            raise exceptions.AuthenticationFailed('Utilizador associado à chave está inativo.')
+            raise AuthenticationFailed("API Key inativa.")
 
         return (api_key.user, api_key)
