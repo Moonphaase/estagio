@@ -7,5 +7,5 @@ urlpatterns = [
     path("token/refresh/", views.TokenRefreshView.as_view(),  name="auth-token-refresh"),
     path("logout/",        views.LogoutView.as_view(),        name="auth-logout"),
     path("me/",            views.MeView.as_view(),            name="auth-me"),
-    path("api/debug-headers/", views.DebugHeadersView.as_view()),
+    path("debug-headers/", views.DebugHeadersView.as_view(), name="auth-debug-headers"),
 ]
