@@ -154,7 +154,7 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': False,
     'PREPROCESSING_HOOKS': ['config.spectacular_hooks.only_get_methods'],
     'SECURITY': [{'apiKeyAuth': []}],
-    'COMPONENTS': {
+    'APPEND_COMPONENTS': {
         'securitySchemes': {
             'apiKeyAuth': {
                 'type': 'apiKey',
