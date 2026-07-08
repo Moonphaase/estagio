@@ -1,21 +1,26 @@
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
-from .models import APIKey
+from api_keys.models import APIKey
 
 
 class APIKeyAuthentication(BaseAuthentication):
-    keyword = 'Api-Key'
+    keyword = "Token"
 
     def authenticate(self, request):
-        auth_header = request.headers.get('Authorization', '')
+        auth_header = request.headers.get("Authorization")
+        if not auth_header:
+            return None
 
-        if not auth_header.startswith(self.keyword + ' '):
-            return None   # deixa o próximo autenticador tentar (ex: JWT)
+        try:
+            prefix, raw_key = auth_header.split(" ", 1)
+        except ValueError:
+            raise AuthenticationFailed("Formato inválido. Use: Authorization: Token <chave>")
 
-        raw_key = auth_header[len(self.keyword) + 1:].strip()
+        if prefix != self.keyword:
+            return None
+
         api_key = APIKey.authenticate(raw_key)
-
         if api_key is None:
-            raise AuthenticationFailed('API Key inválida ou expirada.')
+            raise AuthenticationFailed("API Key inválida, inativa ou expirada.")
 
-        return (api_key.user, api_key)   # (user, auth_token)
+        return (api_key.user, api_key)
