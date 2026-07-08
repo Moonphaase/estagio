@@ -2,6 +2,7 @@ import csv
 import io
 import logging
 import json
+import secrets
 
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.decorators import login_required
@@ -15,7 +16,7 @@ from datasets.audit import audit, audit_dataset_changes
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import make_password
-from api_keys.models import APIKey
+from datasets.models import ApiKey
 from django.utils import timezone
 from datetime import datetime, timezone as dt_timezone
 
@@ -116,44 +117,37 @@ def manage_api_keys(request):
 @login_required
 def api_keys_api(request, id=None):
     if request.method == "GET":
-        APIKey.objects.filter(
-            expires_at__lt=timezone.now(), is_active=True, user=request.user
-        ).update(is_active=False)
-        keys = APIKey.objects.filter(user=request.user).values(
-            'id', 'name', 'key_prefix', 'permissions', 'expires_at', 'is_active', 'last_used_at'
-        )
+        # Desativa automaticamente chaves expiradas
+        ApiKey.objects.filter(expires_at__lt=timezone.now(), is_active=True).update(is_active=False)
+        keys = ApiKey.objects.filter(user=request.user).values('id', 'name', 'key_full', 'expires_at', 'is_active')
         return JsonResponse(list(keys), safe=False)
 
     elif request.method == "POST":
         try:
             data = json.loads(request.body)
             expiry_str = data.get('expires_at')
-
+            
+            # Se a data estiver vazia, define uma data padrão (ex: daqui a 30 dias)
             if not expiry_str:
                 expiry_date = timezone.now() + timezone.timedelta(days=30)
             else:
                 naive_dt = datetime.strptime(expiry_str, '%Y-%m-%d')
                 expiry_date = timezone.make_aware(naive_dt)
-
-            instance, raw_key = APIKey.generate(
+            
+            ApiKey.objects.create(
                 user=request.user,
                 name=data.get('name', 'Nova Chave'),
-                permissions='read',
+                key_full=secrets.token_hex(20),
                 expires_at=expiry_date,
+                is_active=True
             )
-            return JsonResponse({
-                'message': 'Chave gerada com sucesso!',
-                'key': raw_key,
-                'prefix': instance.key_prefix,
-            }, status=201)
+            return JsonResponse({'message': 'Chave gerada com sucesso!'}, status=201)
         except Exception as e:
-            print(f"Erro na geração: {e}")
+            print(f"Erro na geração: {e}") # Verifica isto nos logs do Railway
             return JsonResponse({'error': str(e)}, status=400)
     elif request.method == "DELETE" and id:
-        updated = APIKey.objects.filter(id=id, user=request.user, is_active=True).update(is_active=False)
-        if not updated:
-            return JsonResponse({'error': 'Chave não encontrada'}, status=404)
-        return JsonResponse({'message': 'Chave revogada'}, status=200)
+        ApiKey.objects.filter(id=id, user=request.user).delete()
+        return JsonResponse({'message': 'Chave eliminada'}, status=200)
 
     return JsonResponse({'error': 'Método inválido'}, status=405)
 

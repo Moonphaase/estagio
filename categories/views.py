@@ -19,7 +19,7 @@ class IsAdminOrReadOnly(permissions.BasePermission):
 
         # Se for apenas leitura (GET, HEAD, OPTIONS), a key válida já basta
         if request.method in permissions.SAFE_METHODS:
-            return True
+            return request.user and request.user.is_authenticated
 
         # Se for escrita, exige adicionalmente que o utilizador seja staff
         return request.user and request.user.is_staff
