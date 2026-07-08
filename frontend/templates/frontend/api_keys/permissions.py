@@ -1,5 +1,5 @@
 from rest_framework.permissions import BasePermission
-from api_keys.models import ApiKey
+from datasets.models import ApiKey
 
 
 class HasValidApiKey(BasePermission):
