@@ -1,6 +1,5 @@
 {% extends 'frontend/base.html' %}
 {% block content %}
-<!-- Contentor de notificações fixo no canto superior direito -->
 <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2"></div>
 
 <div class="container mx-auto p-8 max-w-2xl">
@@ -17,12 +16,6 @@
                 </button>
             </div>
         </form>
-    </div>
-
-    <!-- Aviso com a chave completa, mostrado só uma vez após a criação -->
-    <div id="novaChaveBox" class="bg-yellow-50 border border-yellow-300 p-4 rounded mb-8 hidden">
-        <p class="font-semibold text-yellow-800 mb-2">⚠ Guarda esta chave agora — não voltarás a vê-la:</p>
-        <code id="novaChaveValor" class="block bg-white p-2 rounded border text-sm break-all"></code>
     </div>
 
     <div class="bg-white p-6 rounded shadow">
@@ -77,13 +70,6 @@ document.getElementById('formChave').addEventListener('submit', async function(e
         if (response.ok) {
             showToast("Chave gerada com sucesso!");
             document.getElementById('formChave').reset();
-
-            // Mostra a chave completa, uma única vez
-            if (responseData.key) {
-                document.getElementById('novaChaveValor').textContent = responseData.key;
-                document.getElementById('novaChaveBox').classList.remove('hidden');
-            }
-
             carregarChaves();
         } else {
             showToast(responseData.error || "Ocorreu um problema.", "error");
@@ -115,7 +101,7 @@ async function carregarChaves() {
                 <div class="flex justify-between items-center border-b p-2">
                     <div>
                         <span class="font-bold">${k.name}</span><br>
-                        <code class="text-sm">${k.key_prefix}••••••••••••••••••••••••</code><br>
+                        <code class="text-sm">${k.key_full}</code><br>
                         <small class="text-gray-500">
                             Expira em: ${formatarData(k.expires_at)} | 
                             <span class="${cor}">${estado}</span>

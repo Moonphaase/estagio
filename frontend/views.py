@@ -120,7 +120,7 @@ def api_keys_api(request, id=None):
         # Desativa automaticamente chaves expiradas
         APIKey.objects.filter(expires_at__lt=timezone.now(), is_active=True).update(is_active=False)
         keys = APIKey.objects.filter(user=request.user).values(
-            'id', 'name', 'key_prefix', 'expires_at', 'is_active'
+            'id', 'name', 'key_full', 'expires_at', 'is_active'
         )
         return JsonResponse(list(keys), safe=False)
 
