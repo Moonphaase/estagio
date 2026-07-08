@@ -1,21 +1,38 @@
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
-from .models import APIKey
+from django.utils import timezone
+from datasets.models import ApiKey
 
 
-class APIKeyAuthentication(BaseAuthentication):
-    keyword = 'Api-Key'
+class ApiKeyAuthentication(BaseAuthentication):
+    keyword = "Api-Key"
 
     def authenticate(self, request):
-        auth_header = request.headers.get('Authorization', '')
+        auth_header = request.headers.get("Authorization")
+        if not auth_header:
+            return None  # sem header -> AnonymousUser (a permission class é que bloqueia depois)
 
-        if not auth_header.startswith(self.keyword + ' '):
-            return None   # deixa o próximo autenticador tentar (ex: JWT)
+        try:
+            prefix, key = auth_header.split(" ", 1)
+        except ValueError:
+            raise AuthenticationFailed("Formato inválido. Use: Authorization: Api-Key <chave>")
 
-        raw_key = auth_header[len(self.keyword) + 1:].strip()
-        api_key = APIKey.authenticate(raw_key)
+        if prefix != self.keyword:
+            return None
 
-        if api_key is None:
-            raise AuthenticationFailed('API Key inválida ou expirada.')
+        try:
+            api_key = ApiKey.objects.get(key_full=key)
+        except ApiKey.DoesNotExist:
+            raise AuthenticationFailed("API Key inválida.")
 
-        return (api_key.user, api_key)   # (user, auth_token)
+        # Validar expiração diretamente no pedido, não depender do cron do painel
+        if api_key.expires_at and api_key.expires_at < timezone.now():
+            if api_key.is_active:
+                api_key.is_active = False
+                api_key.save(update_fields=["is_active"])
+            raise AuthenticationFailed("API Key expirada.")
+
+        if not api_key.is_active:
+            raise AuthenticationFailed("API Key inativa.")
+
+        return (api_key.user, api_key)
