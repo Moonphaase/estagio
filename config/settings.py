@@ -131,12 +131,11 @@ else:
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'api_keys.authentication.APIKeyAuthentication',
-        # SessionAuthentication removida de propósito:
-        # é ela que permite entrar via cookie de sessão do browser
-        # (ex: um admin com sessão iniciada) sem passar pela API Key.
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
-        'api_keys.permissions.HasValidApiKey',
+        'rest_framework.permissions.IsAuthenticated',
     ),
     'DEFAULT_PAGINATION_CLASS': 'core.pagination.StandardPagination',
     'PAGE_SIZE': 10,
