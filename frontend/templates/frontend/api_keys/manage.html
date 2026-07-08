@@ -11,13 +11,18 @@
         <form id="formChave" class="flex flex-col gap-3">
             <input type="text" id="keyName" placeholder="Nome da chave" class="border p-2 rounded" required>
             <div class="flex gap-2">
-                <!-- min e max definidos para restringir a entrada -->
                 <input type="date" id="expiryDate" class="border p-2 flex-grow rounded" required min="2026-07-06" max="2100-12-31">
                 <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
                     Gerar
                 </button>
             </div>
         </form>
+    </div>
+
+    <!-- Aviso com a chave completa, mostrado só uma vez após a criação -->
+    <div id="novaChaveBox" class="bg-yellow-50 border border-yellow-300 p-4 rounded mb-8 hidden">
+        <p class="font-semibold text-yellow-800 mb-2">⚠ Guarda esta chave agora — não voltarás a vê-la:</p>
+        <code id="novaChaveValor" class="block bg-white p-2 rounded border text-sm break-all"></code>
     </div>
 
     <div class="bg-white p-6 rounded shadow">
@@ -49,7 +54,6 @@ function showToast(message, type = 'success') {
     setTimeout(() => toast.remove(), 4000);
 }
 
-// Função para formatar data de AAAA-MM-DD para DD/MM/AAAA
 function formatarData(dataISO) {
     if (!dataISO) return 'N/A';
     const [ano, mes, dia] = dataISO.split('T')[0].split('-');
@@ -68,13 +72,21 @@ document.getElementById('formChave').addEventListener('submit', async function(e
             body: JSON.stringify({ name: nome, expires_at: data })
         });
 
+        const responseData = await response.json();
+
         if (response.ok) {
             showToast("Chave gerada com sucesso!");
             document.getElementById('formChave').reset();
+
+            // Mostra a chave completa, uma única vez
+            if (responseData.key) {
+                document.getElementById('novaChaveValor').textContent = responseData.key;
+                document.getElementById('novaChaveBox').classList.remove('hidden');
+            }
+
             carregarChaves();
         } else {
-            const errorData = await response.json();
-            showToast(errorData.error || "Ocorreu um problema.", "error");
+            showToast(responseData.error || "Ocorreu um problema.", "error");
         }
     } catch (err) {
         showToast("Erro de conexão.", "error");
@@ -95,10 +107,7 @@ async function carregarChaves() {
         lista.innerHTML = chaves.map(k => {
             const hoje = new Date().toISOString().split('T')[0];
             const dataExp = k.expires_at ? k.expires_at.split('T')[0] : null;
-            
-            // Alterado de "<=" para "<" para que o dia de hoje seja considerado "Ativa"
             const expirada = dataExp ? dataExp < hoje : false;
-            
             const estado = expirada ? 'Expirada' : 'Ativa';
             const cor = expirada ? 'text-red-600' : 'text-green-600';
 
@@ -106,7 +115,7 @@ async function carregarChaves() {
                 <div class="flex justify-between items-center border-b p-2">
                     <div>
                         <span class="font-bold">${k.name}</span><br>
-                        <code class="text-sm">${k.key_full}</code><br>
+                        <code class="text-sm">${k.key_prefix}••••••••••••••••••••••••</code><br>
                         <small class="text-gray-500">
                             Expira em: ${formatarData(k.expires_at)} | 
                             <span class="${cor}">${estado}</span>
