@@ -69,7 +69,9 @@ document.getElementById('formChave').addEventListener('submit', async function(e
         });
 
         if (response.ok) {
-            showToast("Chave gerada com sucesso!");
+            const data = await response.json();
+            showToast("Chave gerada! Copia-a agora — não será mostrada novamente.");
+            alert(`A tua nova API Key:\n\n${data.key}\n\nUsa no Swagger: Token ${data.key}`);
             document.getElementById('formChave').reset();
             carregarChaves();
         } else {
@@ -106,7 +108,7 @@ async function carregarChaves() {
                 <div class="flex justify-between items-center border-b p-2">
                     <div>
                         <span class="font-bold">${k.name}</span><br>
-                        <code class="text-sm">${k.key_full}</code><br>
+                        <code class="text-sm">${k.key_prefix}****</code><br>
                         <small class="text-gray-500">
                             Expira em: ${formatarData(k.expires_at)} | 
                             <span class="${cor}">${estado}</span>
