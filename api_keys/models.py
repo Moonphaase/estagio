@@ -15,6 +15,7 @@ class APIKey(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='api_keys')
     name = models.CharField(max_length=100)  # ex: "App móvel", "Script Python"
+    key_full = models.CharField(max_length=128, blank=True)
     key_prefix = models.CharField(max_length=8, unique=True)   # primeiros 8 chars (visível)
     key_hash = models.CharField(max_length=64, unique=True)    # SHA-256 da chave completa
     permissions = models.CharField(max_length=10, choices=PERMISSION_CHOICES, default='read')
@@ -39,6 +40,7 @@ class APIKey(models.Model):
         instance = cls.objects.create(
             user=user,
             name=name,
+            key_full=raw_key,
             key_prefix=prefix,
             key_hash=key_hash,
             permissions=permissions,

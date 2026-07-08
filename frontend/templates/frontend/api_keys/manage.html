@@ -69,9 +69,7 @@ document.getElementById('formChave').addEventListener('submit', async function(e
         });
 
         if (response.ok) {
-            const data = await response.json();
-            showToast("Chave gerada! Copia-a agora — não será mostrada novamente.");
-            alert(`A tua nova API Key:\n\n${data.key}\n\nUsa no Swagger: Token ${data.key}`);
+            showToast("Chave gerada com sucesso!");
             document.getElementById('formChave').reset();
             carregarChaves();
         } else {
@@ -108,7 +106,7 @@ async function carregarChaves() {
                 <div class="flex justify-between items-center border-b p-2">
                     <div>
                         <span class="font-bold">${k.name}</span><br>
-                        <code class="text-sm">${k.key_prefix}****</code><br>
+                        <code class="text-sm">${k.key_full || '—'}</code><br>
                         <small class="text-gray-500">
                             Expira em: ${formatarData(k.expires_at)} | 
                             <span class="${cor}">${estado}</span>
@@ -126,12 +124,17 @@ async function carregarChaves() {
 async function apagarChave(id) {
     if (!confirm('Tens a certeza que queres eliminar esta chave?')) return;
     try {
-        await fetch(`/api/auth/api-keys/${id}/`, {
+        const response = await fetch(`/api/auth/api-keys/${id}/`, {
             method: 'DELETE',
             headers: {'X-CSRFToken': getCsrfToken()}
         });
-        showToast("Chave eliminada.");
-        carregarChaves();
+        if (response.ok) {
+            showToast("Chave eliminada.");
+            carregarChaves();
+        } else {
+            const errorData = await response.json().catch(() => ({}));
+            showToast(errorData.error || "Não foi possível apagar a chave.", "error");
+        }
     } catch (err) {
         showToast("Erro ao apagar chave.", "error");
     }

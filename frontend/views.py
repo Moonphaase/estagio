@@ -120,7 +120,7 @@ def api_keys_api(request, id=None):
             expires_at__lt=timezone.now(), is_active=True, user=request.user
         ).update(is_active=False)
         keys = APIKey.objects.filter(user=request.user).values(
-            'id', 'name', 'key_prefix', 'permissions', 'expires_at', 'is_active', 'last_used_at'
+            'id', 'name', 'key_full', 'permissions', 'expires_at', 'is_active', 'last_used_at'
         )
         return JsonResponse(list(keys), safe=False)
 
@@ -150,10 +150,10 @@ def api_keys_api(request, id=None):
             print(f"Erro na geração: {e}")
             return JsonResponse({'error': str(e)}, status=400)
     elif request.method == "DELETE" and id:
-        updated = APIKey.objects.filter(id=id, user=request.user, is_active=True).update(is_active=False)
-        if not updated:
+        deleted, _ = APIKey.objects.filter(id=id, user=request.user).delete()
+        if not deleted:
             return JsonResponse({'error': 'Chave não encontrada'}, status=404)
-        return JsonResponse({'message': 'Chave revogada'}, status=200)
+        return JsonResponse({'message': 'Chave eliminada'}, status=200)
 
     return JsonResponse({'error': 'Método inválido'}, status=405)
 
