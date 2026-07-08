@@ -1,0 +1,9 @@
+from django.contrib import admin
+from .models import APIKey
+
+@admin.register(APIKey)
+class APIKeyAdmin(admin.ModelAdmin):
+    list_display = ['name', 'user', 'key_prefix', 'permissions', 'is_active', 'last_used_at', 'created_at']
+    list_filter = ['is_active', 'permissions']
+    search_fields = ['name', 'user__username']
+    readonly_fields = ['key_prefix', 'key_hash', 'last_used_at', 'created_at']
