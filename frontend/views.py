@@ -16,9 +16,9 @@ from datasets.audit import audit, audit_dataset_changes
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import make_password
-from datasets.models import APIKey
-from django.utils import timezone
+from api_keys.models import APIKey
 from datetime import datetime, timezone as dt_timezone
+from django.utils import timezone
 
 logger = logging.getLogger('accounts')
 
