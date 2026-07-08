@@ -15,9 +15,10 @@ from rest_framework import viewsets, permissions, status, filters
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
 
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiTypes
+
+from api_keys.permissions import HasValidApiKey
 
 from .models import Dataset, DatasetVersion, DownloadLog, DatasetFavorite
 from .permissions import IsOwnerOrAdmin
@@ -49,7 +50,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
     filter_backends    = [filters.SearchFilter, filters.OrderingFilter]
     search_fields      = ["name", "description", "category__name"]
     ordering_fields    = ["name", "created_at", "updated_at", "status", "visibility"]
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [HasValidApiKey]
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -58,8 +59,8 @@ class DatasetViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
-            return [permissions.IsAuthenticated()]
-        return [permissions.IsAuthenticated(), IsOwnerOrAdmin()]
+            return [HasValidApiKey()]
+        return [HasValidApiKey(), IsOwnerOrAdmin()]
 
     def get_queryset(self):
         qs   = super().get_queryset()
@@ -105,7 +106,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
 
     # ── FAVORITOS ────────────────────────────────────────────────────────────
 
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=['post'], permission_classes=[HasValidApiKey])
     def favorite(self, request, pk=None):
         dataset  = self.get_object()
         favorite, created = DatasetFavorite.objects.get_or_create(
@@ -116,7 +117,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
             return Response({'status': 'removed', 'is_favorited': False})
         return Response({'status': 'added', 'is_favorited': True}, status=status.HTTP_201_CREATED)
 
-    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=['get'], permission_classes=[HasValidApiKey])
     def my_favorites(self, request):
         favorites  = DatasetFavorite.objects.filter(
             user=request.user
@@ -126,7 +127,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
 
     # ── DOWNLOADS ────────────────────────────────────────────────────────────
 
-    @action(detail=True, methods=["get"], url_path="latest/download", permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=["get"], url_path="latest/download", permission_classes=[HasValidApiKey])
     def latest_download(self, request, pk=None):
         dataset = self.get_object()
         version = dataset.versions.filter(is_latest=True).first()
@@ -149,7 +150,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
         return response
 
     @extend_schema(responses=DatasetStatsSerializer)
-    @action(detail=True, methods=["get"], url_path="stats", permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=["get"], url_path="stats", permission_classes=[HasValidApiKey])
     def stats(self, request, pk=None):
         dataset = self.get_object()
         now     = timezone.now()
@@ -184,7 +185,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
 )
 class DatasetVersionViewSet(viewsets.ModelViewSet):
     serializer_class   = DatasetVersionSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [HasValidApiKey]
 
     def get_queryset(self):
         return DatasetVersion.objects.filter(
@@ -247,7 +248,7 @@ class DatasetVersionViewSet(viewsets.ModelViewSet):
                 next_latest.save(update_fields=["is_latest"])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(detail=True, methods=["get"], permission_classes=[permissions.IsAuthenticated])
+    @action(detail=True, methods=["get"], permission_classes=[HasValidApiKey])
     def download(self, request, dataset_pk=None, pk=None):
         version = self.get_object()
         if not version.file:
